@@ -21,7 +21,7 @@ import MasterDashboard from './components/MasterDashboard';
 
 import { 
   Building2, ClipboardList, LayoutDashboard, Dumbbell, 
-  Plus, Shield, Hammer, Users, HelpCircle, LogOut, ShieldAlert, Settings as SettingsIcon, Moon, Sun
+  Plus, Shield, Hammer, Users, HelpCircle, LogOut, ShieldAlert, Settings as SettingsIcon, Moon, Sun, MessageCircle
 } from 'lucide-react';
 import { 
   syncCollection, saveToFirestore, deleteFromFirestore, 
@@ -614,6 +614,14 @@ export default function App() {
                 <p className="text-xs font-bold text-rose-950 dark:text-rose-400 mt-0.5 leading-relaxed">
                   O período de licença/créditos de acesso desta assistência ({currentAssistencia?.name}) expirou em {currentAssistencia?.expiresAt ? new Date(currentAssistencia.expiresAt).toLocaleDateString('pt-BR') : 'Mínimo 30 dias'}. Todas as permissões de edição/registro foram suspensas. Para regularizar o acesso, entre em contato com o Administrador Master (clementebsf@gmail.com).
                 </p>
+                <a 
+                  href={`https://wa.me/?text=${encodeURIComponent(`Olá, gostaria de regularizar o acesso do sistema para a assistência: ${currentAssistencia?.name}`)}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="mt-3 bg-[#25D366] hover:bg-[#1DA851] text-white font-black text-[10px] px-3 py-1.5 rounded-lg inline-flex items-center gap-2 uppercase tracking-wide cursor-pointer transition-colors"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" /> Falar no WhatsApp
+                </a>
               </div>
             </div>
             <span className="text-[10px] bg-rose-600 text-white px-3 py-1 font-mono uppercase font-black tracking-widest self-start sm:self-center rounded-md">

@@ -450,7 +450,7 @@ export default function UserManagement({
           <table className="w-full text-left border-collapse min-w-[600px] text-xs">
             <thead>
               <tr className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 uppercase font-black tracking-wider text-[10px]">
-                <th className="p-3 border-r border-neutral-700">Nome (Pessoa)</th>
+                <th className="p-3 border-r border-neutral-700 sticky left-0 z-20 bg-neutral-900 dark:bg-neutral-100">Nome (Pessoa)</th>
                 <th className="p-3 border-r border-neutral-700">E-mail de Acesso</th>
                 <th className="p-3 border-r border-neutral-700 whitespace-nowrap">WhatsApp</th>
                 <th className="p-3 border-r border-neutral-700">Senha Acesso</th>
@@ -466,8 +466,8 @@ export default function UserManagement({
                 const isEditing = editingUserId === u.id;
 
                 return (
-                  <tr key={u.id} className={`${i % 2 === 0 ? 'bg-white dark:bg-neutral-800' : 'bg-neutral-50'} hover:bg-neutral-100 ${isEditing ? 'bg-amber-50 dark:bg-amber-900/30 border-y-2 border-black' : ''}`}>
-                    <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-black uppercase text-neutral-900 dark:text-neutral-100">
+                  <tr key={u.id} className={`group ${i % 2 === 0 ? 'bg-white dark:bg-neutral-800' : 'bg-neutral-50 dark:bg-neutral-800/50'} hover:bg-neutral-100 dark:hover:bg-neutral-700 ${isEditing ? 'bg-amber-50 dark:bg-amber-900/30 border-y-2 border-black' : ''}`}>
+                    <td className={`p-3 border-r border-neutral-200 dark:border-neutral-700 font-black uppercase text-neutral-900 dark:text-neutral-100 sticky left-0 z-10 ${isEditing ? 'bg-amber-50 dark:bg-amber-900' : (i % 2 === 0 ? 'bg-white dark:bg-neutral-800' : 'bg-neutral-50 dark:bg-neutral-800')} group-hover:bg-neutral-100 dark:group-hover:bg-neutral-700`}>
                       {isEditing && currentUser.role === 'ADMIN' ? (
                         <input
                           type="text"

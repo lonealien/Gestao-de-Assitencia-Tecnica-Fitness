@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { 
   Building2, Users, ClipboardList, Plus, Trash2, Calendar, 
   Download, Upload, Check, AlertCircle, Eye, Shield, 
-  Search, ShieldAlert, CheckCircle, Ban, X, KeyRound, LogOut, Sun, Moon
+  Search, ShieldAlert, CheckCircle, Ban, X, KeyRound, LogOut, Sun, Moon, ChevronDown, ChevronRight, MessageCircle
 } from 'lucide-react';
 import { AssistenciaTecnica, OrdemServico, Tecnico, AppUser } from '../types';
 import { maskPhone, maskDocument, maskCEP } from '../utils';
@@ -84,6 +84,7 @@ export default function MasterDashboard({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [restoringAstId, setRestoringAstId] = useState<string | null>(null);
+  const [expandedCompanies, setExpandedCompanies] = useState<Record<string, boolean>>({});
 
   const [passwordEditingUser, setPasswordEditingUser] = useState<AppUser | null>(null);
   const [newAdminEmailInput, setNewAdminEmailInput] = useState('');
@@ -313,7 +314,10 @@ export default function MasterDashboard({
   // 5. Per-Assistencia Backup Upload / RESTORE
   const handleBackupUploadChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      setRestoringAstId(null);
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = async (event) => {
@@ -323,6 +327,13 @@ export default function MasterDashboard({
 
         if (backupObj.type !== 'assistencia_backup' || !backupObj.assistencia) {
           triggerErrorMsg('Arquivo de backup inválido ou incompatível.');
+          setRestoringAstId(null);
+          return;
+        }
+
+        if (restoringAstId && restoringAstId !== backupObj.assistencia.id) {
+          triggerErrorMsg(`Este backup pertence à empresa ID "${backupObj.assistencia.id}". Você só pode restaurar backups correspondentes à empresa selecionada.`);
+          setRestoringAstId(null);
           return;
         }
 
@@ -340,6 +351,7 @@ export default function MasterDashboard({
         console.error(err);
         triggerErrorMsg('Erro ao ler ou analisar o arquivo de backup.');
       }
+      setRestoringAstId(null);
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
@@ -490,38 +502,6 @@ export default function MasterDashboard({
             <AlertCircle className="w-4 h-4 text-rose-600" /> {errorMsg}
           </div>
         )}
-
-        {/* Global Stats bar */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-neutral-500 uppercase font-black">Assistências (Clientes)</p>
-              <h4 className="text-3xl font-black text-neutral-900 dark:text-neutral-100 mt-1">{assistencias.length}</h4>
-            </div>
-            <Building2 className="w-8 h-8 text-neutral-300 dark:text-neutral-600" />
-          </div>
-
-          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-neutral-500 uppercase font-black">Admins de Empresas</p>
-              <h4 className="text-3xl font-black text-neutral-900 dark:text-neutral-100 mt-1">{usuarios.filter(u => u.role === 'ADMIN' || u.role === 'ASSISTENCIA_GERENTE').length}</h4>
-            </div>
-            <Users className="w-8 h-8 text-neutral-300 dark:text-neutral-600" />
-          </div>
-
-          <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] text-neutral-500 uppercase font-black">Restaurar Backups</p>
-              <button
-                onClick={() => { if (fileInputRef.current) fileInputRef.current.click(); }}
-                className="mt-2 text-[10px] font-black uppercase text-yellow-600 bg-yellow-100 border border-yellow-200 hover:bg-yellow-200 transition-all px-3 py-1.5 flex items-center gap-1 cursor-pointer rounded-lg"
-              >
-                <Upload className="w-3.5 h-3.5" /> Enviar Backup
-              </button>
-            </div>
-            <Upload className="w-8 h-8 text-neutral-300 dark:text-neutral-600" />
-          </div>
-        </div>
 
         {/* Search Search Filter Controllers */}
         <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -748,128 +728,157 @@ export default function MasterDashboard({
               ) : (
                 searchedAssistencias.map(ast => {
                   const companyAdmin = usuarios.find(u => u.assistenciaId === ast.id && u.role === 'ADMIN');
-                  const activeOSs = ordens.filter(o => o.assistenciaId === ast.id);
-                  const companyTecs = tecnicos.filter(t => t.assistenciaId === ast.id);
                   const isBlockedVal = ast.active === false;
 
                   return (
-                    <div key={ast.id} className={`bg-white dark:bg-neutral-800 border-2 rounded-2xl shadow-sm hover:shadow-md transition-all p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-5 leading-normal ${isBlockedVal ? 'border-rose-400 bg-rose-50/5' : 'border-neutral-200'}`}>
-                      {/* Left: General data */}
-                      <div className="space-y-2 max-w-xl">
+                    <div key={ast.id} className={`bg-white dark:bg-neutral-800 border rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col leading-normal ${isBlockedVal ? 'border-rose-400 bg-rose-50/5' : 'border-neutral-200'}`}>
+                      {/* Always visible minimal header */}
+                      <div 
+                        className="p-3 flex flex-col sm:flex-row items-center justify-between gap-3 cursor-pointer select-none"
+                        onClick={() => setExpandedCompanies(prev => ({ ...prev, [ast.id]: !prev[ast.id] }))}
+                      >
                         <div className="flex items-center gap-3">
-                          <div className={`p-2.5 rounded-xl text-neutral-900 ${isBlockedVal ? 'bg-rose-100' : 'bg-neutral-100'}`}>
-                            <Building2 className="w-6 h-6" />
+                          <div className={`p-2 rounded-lg text-neutral-900 ${isBlockedVal ? 'bg-rose-100' : 'bg-neutral-100 shadow-sm'}`}>
+                            <Building2 className="w-5 h-5" />
                           </div>
                           <div>
-                            <h4 className="font-black text-base uppercase text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                            <h4 className="font-black text-sm uppercase text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
                               {ast.name}
+                              <span className="text-neutral-400 bg-neutral-100 dark:bg-neutral-800 p-0.5 rounded-md border border-neutral-200 dark:border-neutral-700">
+                                {expandedCompanies[ast.id] ? (
+                                  <ChevronDown className="w-4 h-4" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4" />
+                                )}
+                              </span>
                               {isBlockedVal && <span className="bg-rose-150 text-rose-700 text-[8px] font-black uppercase px-2 py-0.5 tracking-widest rounded">BLOQUEADA DE ACESSO</span>}
                             </h4>
                             <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wide">
-                              ID: {ast.id} • CNPJ: {ast.cnpj || '—'}
+                              ID: {ast.id}
                             </p>
                           </div>
                         </div>
-
-                        <div className="text-xs space-y-1 text-neutral-600 dark:text-neutral-300">
-                          <p>📍 <strong>Localização:</strong> {ast.address}, {ast.city} - {ast.state} {ast.zipCode ? `(CEP: ${ast.zipCode})` : ''}</p>
-                          <p>📞 <strong>Contato:</strong> {ast.phone || '—'} • ✉️ <strong>Email:</strong> {ast.email || '—'}</p>
-                          {companyAdmin && (
-                            <p className="bg-amber-50 dark:bg-neutral-950 p-2 border border-neutral-150 dark:border-neutral-800 text-[11px] inline-block font-bold">
-                              🔑 <strong>Admin Inicial:</strong> username: <code className="text-black dark:text-yellow-100 font-black">{companyAdmin.username}</code> | senha: <code className="text-black dark:text-yellow-100 font-black">{companyAdmin.password}</code>
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-3 pt-1 text-[10px] font-black uppercase tracking-wider text-neutral-500">
-                          <span className="bg-neutral-100 dark:bg-neutral-950 px-2.5 py-1 rounded-md">📋 {activeOSs.length} OSs</span>
-                          <span className="bg-neutral-100 dark:bg-neutral-950 px-2.5 py-1 rounded-md">🔧 {companyTecs.length} Mecânicos</span>
+                        <div className="flex items-center gap-4">
+                          <div>
+                            {getExpirationBadge(ast)}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Right: Credits, expiration & quick Master Actions */}
-                      <div className="flex flex-col sm:flex-row lg:flex-col lg:items-end justify-center gap-4 lg:text-right border-t pt-4 sm:pt-0 sm:border-t-0 border-dashed border-neutral-200">
-                        
-                        {/* Expiration label status */}
-                        <div className="self-start sm:self-center lg:self-auto">
-                          {getExpirationBadge(ast)}
-                        </div>
-
-                        {/* Fast Credits & Expiration setup */}
-                        <div className="space-y-1 w-full sm:w-auto">
-                          <span className="block text-[9px] text-neutral-400 font-black uppercase mb-1">Configurar Crédito / Vencimento:</span>
-                          <div className="flex gap-1.5 flex-wrap">
-                            <button
-                              onClick={() => handleExtendCredits(ast, 30)}
-                              className="bg-yellow-300 hover:bg-yellow-400 text-neutral-950 font-black text-[10px] uppercase tracking-wider px-3 py-2 border rounded-xl cursor-pointer"
-                              title="Adicionar 30 dias adicionais de crédito"
-                            >
-                              +30 Dias
-                            </button>
-                            <button
-                              onClick={() => handleExtendCredits(ast, 90)}
-                              className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-black text-[10px] uppercase tracking-wider px-3 py-2 border rounded-xl cursor-pointer"
-                              title="Adicionar 90 dias de crédito"
-                            >
-                              +90 Dias
-                            </button>
+                      {/* Expansible Details Content */}
+                      {expandedCompanies[ast.id] && (
+                        <div className="p-5 border-t border-dashed border-neutral-200 dark:border-neutral-700 flex flex-col lg:flex-row lg:items-end justify-between gap-6 animate-fadeIn">
+                          {/* Left: General data */}
+                          <div className="space-y-2 max-w-xl">
+                            <h5 className="font-black text-xs uppercase tracking-wider text-neutral-900 dark:text-neutral-100 border-b border-neutral-100 dark:border-neutral-800 pb-2 mb-3">Detalhes da Assistência</h5>
+                            <div className="text-xs space-y-1.5 text-neutral-600 dark:text-neutral-300">
+                              <p>📄 <strong>CNPJ:</strong> {ast.cnpj || '—'}</p>
+                              <p>📍 <strong>Endereço:</strong> {ast.address || '—'}</p>
+                              <p>🌍 <strong>Cidade/Estado:</strong> {ast.city || '—'} - {ast.state || '—'}</p>
+                              <p>📮 <strong>CEP:</strong> {ast.zipCode || '—'}</p>
+                              <p>✉️ <strong>Email:</strong> {ast.email || '—'}</p>
+                              <p>📞 <strong>Telefone:</strong> {ast.phone || '—'}</p>
+                              {ast.phone && (
+                                <p className="pt-2">
+                                  <a 
+                                    href={`https://wa.me/55${ast.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, falando aqui da administração do sistema.`)}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="bg-[#25D366] hover:bg-[#1DA851] text-white font-black text-[10px] px-3 py-1.5 rounded-lg inline-flex items-center gap-2 uppercase tracking-wide cursor-pointer transition-colors"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" /> Falar no WhatsApp
+                                  </a>
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          
-                          <div className="flex gap-1 items-center mt-2 w-full">
-                            <input
-                              type="date"
-                              id={`custom-date-${ast.id}`}
-                              value={customExpDates[ast.id] || ''}
-                              onChange={e => setCustomExpDates({ ...customExpDates, [ast.id]: e.target.value })}
-                              className="border border-neutral-200 dark:border-neutral-800 text-[10px] p-1 font-bold h-8 rounded-lg focus:outline-none bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"
-                            />
-                            <button
-                              onClick={() => handleSetCustomExpiration(ast)}
-                              className="bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 font-bold text-[10px] px-2 h-8 rounded-lg"
-                            >
-                              Aplicar
-                            </button>
+
+                          {/* Right: Credits, Backup & Actions */}
+                          <div className="flex flex-col sm:flex-row lg:flex-col lg:items-end justify-center gap-4 lg:text-right w-full lg:w-auto">
+                            
+                            {/* Fast Credits & Expiration setup */}
+                            <div className="w-full sm:w-auto bg-neutral-50 dark:bg-neutral-900/50 p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 flex flex-col items-start gap-2">
+                              <span className="text-[9px] text-neutral-500 font-black uppercase">Configurar Crédito / Vencimento:</span>
+                              <div className="flex flex-nowrap items-center gap-3 overflow-x-auto w-full">
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button
+                                    onClick={() => handleExtendCredits(ast, 30)}
+                                    className="bg-yellow-300 hover:bg-yellow-400 text-neutral-950 font-black text-[10px] uppercase tracking-wider px-3 py-1.5 border border-yellow-400 rounded-lg cursor-pointer"
+                                    title="Adicionar 30 dias adicionais de crédito"
+                                  >
+                                    +30 Dias
+                                  </button>
+                                </div>
+                                
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <input
+                                    type="date"
+                                    id={`custom-date-${ast.id}`}
+                                    value={customExpDates[ast.id] || ''}
+                                    onChange={e => setCustomExpDates({ ...customExpDates, [ast.id]: e.target.value })}
+                                    className="border border-neutral-200 dark:border-neutral-800 text-[10px] p-1 font-bold h-7 rounded-md focus:outline-none bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100"
+                                  />
+                                  <button
+                                    onClick={() => handleSetCustomExpiration(ast)}
+                                    className="bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 font-bold text-[10px] px-3 h-7 rounded-md cursor-pointer"
+                                  >
+                                    Aplicar
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action buttons (blocking, Backup Import/Export, delete company) */}
+                            <div className="flex gap-2 justify-end items-center flex-wrap w-full sm:w-auto pt-2 lg:pt-0">
+                              <button
+                                onClick={() => handleToggleAssistencia(ast)}
+                                className={`p-2.5 rounded-xl border transition-all cursor-pointer ${isBlockedVal ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-250' : 'bg-rose-100 text-rose-600 border-rose-200 hover:bg-rose-250'}`}
+                                title={isBlockedVal ? "Desbloquear Empresa" : "Bloquear Acesso da Oficina"}
+                              >
+                                {isBlockedVal ? <CheckCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                              </button>
+                              
+                              <button
+                                onClick={() => {
+                                  setRestoringAstId(ast.id);
+                                  if (fileInputRef.current) fileInputRef.current.click();
+                                }}
+                                className="bg-yellow-100 text-yellow-700 border border-yellow-200 hover:bg-yellow-200 p-2.5 rounded-xl transition-colors cursor-pointer flex items-center justify-center"
+                                title="Importar/Restaurar Backup (.JSON)"
+                              >
+                                <Upload className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                onClick={() => handleBackupDownload(ast)}
+                                className="bg-neutral-100 text-neutral-700 border border-neutral-200 hover:bg-neutral-200 p-2.5 rounded-xl transition-colors cursor-pointer flex items-center justify-center"
+                                title="Exportar Backup de Dados (.JSON)"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setDeleteConfirm({
+                                    title: "⚠️ EXCLUSÃO MASTER DE SEGURANÇA ⚠️",
+                                    message: `Tem certeza que deseja excluir a assistência técnica "${ast.name}" de forma DEFINITIVA?\n\nTodos os técnicos, usuários de entrada e histórico de ordens vinculadas a esta assistência serão removidos permanentemente.\n\nATENÇÃO: Recomenda-se gerar um backup antes de prosseguir!`,
+                                    onConfirm: () => {
+                                      onDeleteAssistencia(ast.id);
+                                      triggerSuccessMsg(`Assistência "${ast.name}" foi excluída permanentemente.`);
+                                    },
+                                    isDanger: true
+                                  });
+                                }}
+                                className="bg-rose-500 text-white hover:bg-rose-600 p-2.5 rounded-xl transition-colors cursor-pointer border border-rose-600 shadow-sm"
+                                title="Excluir Empresa Permanentemente"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+
                           </div>
                         </div>
-
-                        {/* Action buttons (blocking, download backup, delete company) */}
-                        <div className="flex gap-2 justify-end w-full sm:w-auto pt-2 lg:pt-0">
-                          <button
-                            onClick={() => handleToggleAssistencia(ast)}
-                            className={`p-2 rounded-xl border transition-all cursor-pointer ${isBlockedVal ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-250' : 'bg-rose-100 text-rose-600 border-rose-200 hover:bg-rose-250'}`}
-                            title={isBlockedVal ? "Desbloquear Empresa" : "Bloquear Acesso da Oficina"}
-                          >
-                            {isBlockedVal ? <CheckCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
-                          </button>
-                          
-                          <button
-                            onClick={() => handleBackupDownload(ast)}
-                            className="bg-neutral-100 text-neutral-700 border-neutral-200 hover:bg-neutral-200 p-2 rounded-xl transition-colors cursor-pointer"
-                            title="Exportar Backup de Dados (.JSON)"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setDeleteConfirm({
-                                title: "⚠️ EXCLUSÃO MASTER DE SEGURANÇA ⚠️",
-                                message: `Tem certeza que deseja excluir a assistência técnica "${ast.name}" de forma DEFINITIVA?\n\nTodos os técnicos, usuários de entrada e histórico de ordens vinculadas a esta assistência serão removidos permanentemente.`,
-                                onConfirm: () => {
-                                  onDeleteAssistencia(ast.id);
-                                  triggerSuccessMsg(`Assistência "${ast.name}" foi excluída permanentemente.`);
-                                },
-                                isDanger: true
-                              });
-                            }}
-                            className="bg-rose-500 text-white hover:bg-rose-600 p-2 rounded-xl transition-colors cursor-pointer"
-                            title="Excluir Empresa Permanentemente"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                      </div>
+                      )}
                     </div>
                   );
                 })
@@ -966,7 +975,7 @@ export default function MasterDashboard({
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 uppercase font-black leading-none text-[10px]">
-                    <th className="p-3 border-r border-neutral-700">NOME / EMPRESA</th>
+                    <th className="p-3 border-r border-neutral-700 sticky left-0 z-20 bg-neutral-900 dark:bg-neutral-100">NOME / EMPRESA</th>
                     <th className="p-3 border-r border-neutral-700">E-mail de Acesso</th>
                     <th className="p-3 border-r border-neutral-700 whitespace-nowrap">WhatsApp</th>
                     <th className="p-3 border-r border-neutral-700">Senha Acesso</th>
@@ -978,8 +987,8 @@ export default function MasterDashboard({
                   {searchedUsuarios.map(u => {
                     const ast = assistencias.find(a => a.id === u.assistenciaId);
                     return (
-                      <tr key={u.id} className="hover:bg-neutral-100 dark:hover:bg-neutral-750">
-                        <td className="p-3 font-black text-neutral-900 dark:text-neutral-100 border-r border-neutral-200 dark:border-neutral-700 uppercase">
+                      <tr key={u.id} className="group hover:bg-neutral-100 dark:hover:bg-neutral-700 bg-white dark:bg-neutral-800">
+                        <td className="p-3 font-black text-neutral-900 dark:text-neutral-100 border-r border-neutral-200 dark:border-neutral-700 uppercase sticky left-0 z-10 bg-white dark:bg-neutral-800 group-hover:bg-neutral-100 dark:group-hover:bg-neutral-700">
                           {u.name}
                         </td>
                         <td className="p-3 border-r border-neutral-200 dark:border-neutral-700">
