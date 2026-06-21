@@ -1,0 +1,55 @@
+{
+  "collections": {
+    "usuarios": {
+      "id": "string",
+      "name": "string",
+      "username": "string",
+      "email": "string",
+      "password": "string",
+      "role": "string",
+      "tecnicoId": "string?",
+      "assistenciaId": "string?",
+      "active": "boolean"
+    },
+    "tecnicos": {
+      "id": "string",
+      "name": "string",
+      "phone": "string",
+      "email": "string",
+      "assistenciaId": "string",
+      "specialties": "string[]"
+    },
+    "ordens": {
+      "id": "string",
+      "numero": "string",
+      "clientName": "string",
+      "clientAddress": "string",
+      "clientPhone": "string",
+      "assistenciaId": "string",
+      "tecnicoId": "string?",
+      "equipamento": "string",
+      "defeitoRelatado": "string",
+      "laudoTecnico": "string?",
+      "status": "string",
+      "priority": "string",
+      "dataAbertura": "string",
+      "dataAtendimento": "string?",
+      "dataConclusao": "string?",
+      "atendimentoLimit": "string",
+      "conclusaoLimit": "string",
+      "fotos": "string[]"
+    },
+    "assistencias": {
+      "id": "string",
+      "name": "string",
+      "manager": "string",
+      "location": "string"
+    },
+    "settings": {
+      "id": "string",
+      "name": "string",
+      "currency": "string",
+      "logoUrl": "string?"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Gestao de Assistencia",
+  "description": "Aplicativo para cadastro de assistências técnicas de aparelhos de ginástica e gerenciamento de ordens de serviço por administradores e técnicos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

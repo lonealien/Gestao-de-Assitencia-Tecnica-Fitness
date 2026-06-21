@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    @apply bg-neutral-50 text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #os-receipt-card, #os-receipt-card * {
+    visibility: visible !important;
+  }
+  #os-receipt-card {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    padding: 15mm !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    z-index: 9999 !important;
+    display: block !important;
+    background: white !important;
+    color: black !important;
+  }
+  /* Hide the modal backdrop/footer during print */
+  .fixed.inset-0.bg-black\/70 {
+    background: none !important;
+    backdrop-filter: none !important;
+  }
+}
