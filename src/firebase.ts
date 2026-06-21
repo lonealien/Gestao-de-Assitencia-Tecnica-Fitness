@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore } from 'firebase/firestore';
+import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCa_PdxFwIMOGOOvY1wngWn5m7wydXNA5A",
@@ -15,3 +15,17 @@ const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(app, {
   ignoreUndefinedProperties: true
 }, firebaseConfig.databaseId);
+
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+    console.log("Firestore connection verified successfully.");
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration.");
+    } else {
+      console.warn("Connection test status:", error);
+    }
+  }
+}
+testConnection();

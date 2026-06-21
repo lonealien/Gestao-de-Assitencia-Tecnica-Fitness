@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   loadAssistencias, saveAssistencias, 
   loadTecnicos, saveTecnicos, 
@@ -50,7 +50,54 @@ export default function App() {
   const [showAddOSForm, setShowAddOSForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const lastScrollY = useRef(0);
+  const ignoreScrollUntil = useRef(0);
+
+  // Detect mobile device layout
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    // Add scroll listener to minimize mobile header on scroll down
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      const scrollDiff = currentScrollY - lastScrollY.current;
+      
+      // Stop jitter/flicker by ignoring very small scrolls
+      if (Math.abs(scrollDiff) < 10 && currentScrollY > 50) {
+        return;
+      }
+      
+      if (Date.now() > ignoreScrollUntil.current) {
+        if (Math.abs(scrollDiff) > 10 || currentScrollY > 50) {
+          setIsMobileMenuOpen(false);
+        }
+      }
+      
+      lastScrollY.current = currentScrollY;
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const handleMobileMenuToggle = () => {
+    ignoreScrollUntil.current = Date.now() + 500; // Ignore scroll-based close for 500ms
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const isHeaderMinimized = isMobile && !isMobileMenuOpen;
 
   // Load datasets on startup from Firestore
   useEffect(() => {
@@ -425,24 +472,24 @@ export default function App() {
       {/* Main platform header navigation */}
       <header className="sticky top-0 z-40 bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 shadow-sm dark:shadow-none">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between py-4 lg:py-0 lg:h-20 gap-4">
+          <div className={`flex flex-col lg:flex-row lg:items-center lg:justify-between ${isHeaderMinimized ? 'py-1.5' : 'py-4'} lg:py-0 lg:h-20 gap-4`}>
             
             {/* Branding Logo */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {activeStoreSettings.logoUrl ? (
-                  <img src={activeStoreSettings.logoUrl} alt={activeStoreSettings.name} className="h-10 w-10 object-contain border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800" />
+                  <img src={activeStoreSettings.logoUrl} alt={activeStoreSettings.name} className={`${isHeaderMinimized ? 'h-6 w-6' : 'h-10 w-10'} object-contain border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-lg transition-all`} />
                 ) : (
-                  <div className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 p-2.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm dark:shadow-none">
-                    <Dumbbell className="w-6 h-6 rotate-45 text-yellow-300 stroke-[2.5]" />
+                  <div className={`bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 ${isHeaderMinimized ? 'p-1.5 rounded-lg' : 'p-2.5 rounded-2xl'} border border-neutral-200 dark:border-neutral-700 shadow-sm dark:shadow-none transition-all`}>
+                    <Dumbbell className={`${isHeaderMinimized ? 'w-4 h-4' : 'w-6 h-6'} rotate-45 text-yellow-300 stroke-[2.5]`} />
                   </div>
                 )}
                 <div className="flex items-center gap-2">
                   <div>
-                    <span className="font-black text-neutral-900 dark:text-neutral-100 text-xl uppercase tracking-tight block max-w-[150px] sm:max-w-[200px] truncate" title={activeStoreSettings.name}>{activeStoreSettings.name}</span>
-                    <span className="text-[10px] text-neutral-500 block leading-none font-black uppercase tracking-wider">Gestão Técnica</span>
+                    <span className={`font-black text-neutral-900 dark:text-neutral-100 ${isHeaderMinimized ? 'text-sm' : 'text-xl'} uppercase tracking-tight block max-w-[150px] sm:max-w-[200px] truncate transition-all`} title={activeStoreSettings.name}>{activeStoreSettings.name}</span>
+                    <span className="text-[10px] text-neutral-500 block leading-none font-black uppercase tracking-wider">{loggedUser.name}</span>
                   </div>
-                  {(loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE') && (
+                  {(loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE') && !isHeaderMinimized && (
                     <button 
                       onClick={() => setShowSettings(true)}
                       className="p-1.5 text-neutral-400 hover:text-neutral-900 dark:text-neutral-100 hover:bg-neutral-100 transition-colors"
@@ -454,13 +501,15 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Mobile Menu Toggle */}
-              <button 
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2 text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 rounded-xl"
-              >
-                {isMobileMenuOpen ? <Plus className="w-6 h-6 rotate-45" /> : <ClipboardList className="w-6 h-6" />}
-              </button>
+              {/* Mobile controls */}
+              <div className="flex items-center gap-2 lg:hidden">
+                <button 
+                  onClick={handleMobileMenuToggle}
+                  className="p-2 text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 rounded-xl"
+                >
+                  {isMobileMenuOpen ? <Plus className="w-6 h-6 rotate-45" /> : <ClipboardList className="w-6 h-6" />}
+                </button>
+              </div>
             </div>
 
             {/* Navigation Link Tabs */}
@@ -626,9 +675,15 @@ export default function App() {
                       Gerencie ordens de esteiras, bicicletas, elípticos e estações de musculação.
                     </p>
                   </div>
-                  {(loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE' || loggedUser.role === 'ATENDENTE') && !(loggedUser.isReadOnly || isExpired) && (
+                  {(loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE' || loggedUser.role === 'ATENDENTE') && (
                     <button
-                      onClick={() => setShowAddOSForm(true)}
+                      onClick={() => {
+                        if (loggedUser.isReadOnly || isExpired) {
+                          alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                          return;
+                        }
+                        setShowAddOSForm(true);
+                      }}
                       className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 text-white dark:text-neutral-900 text-xs font-black uppercase tracking-widest px-5 py-3 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm dark:shadow-none hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer self-start"
                     >
                       <Plus className="w-4 h-4 stroke-[3]" />
@@ -717,15 +772,18 @@ export default function App() {
       {/* Modern Soft Footer */}
       <footer className="bg-white dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 py-8 mt-16 text-neutral-500 dark:text-neutral-400 text-xs font-black uppercase tracking-wider">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-black text-neutral-900 dark:text-neutral-100 tracking-tight text-sm uppercase">{activeStoreSettings.name}</span>
-            <span className="text-neutral-300 dark:text-neutral-600">•</span>
-            <span className="font-bold font-mono">SISTEMA v2.0</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="font-black text-neutral-900 dark:text-neutral-100 tracking-tight text-sm uppercase">{activeStoreSettings.name}</span>
+              <span className="text-neutral-300 dark:text-neutral-600">•</span>
+              <span className="font-bold font-mono">SISTEMA v2.0</span>
+            </div>
+            {loggedUser?.assistenciaId && (
+              <span className="text-[9px] font-mono font-bold text-neutral-400">ID DA REDE INTERNA: {loggedUser.assistenciaId}</span>
+            )}
           </div>
           <div className="flex space-x-6 font-black tracking-widest">
-            <span className="hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer">POLÍTICAS</span>
-            <span className="hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer">SUPORTE INTEGRADO</span>
-            <span className="font-mono tracking-tight text-[10px] bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-0.5">DEV SECURE PREVIEW</span>
+            <span className="font-mono tracking-tight text-[10px] bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-0.5">by; LonneTech</span>
           </div>
         </div>
       </footer>

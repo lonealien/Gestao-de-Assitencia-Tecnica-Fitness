@@ -47,13 +47,17 @@ export default function DashboardStats({
   // Helpers matching simulated date of metadata or standard clock
   const isTodayMatch = (dateStr?: string) => {
     if (!dateStr) return false;
-    const cleanDate = dateStr.split('T')[0];
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const cleanDate = d.toISOString().split('T')[0];
     return cleanDate === '2026-06-18' || cleanDate === todayStr;
   };
 
   const isWeekMatch = (dateStr?: string) => {
     if (!dateStr) return false;
-    const cleanDate = dateStr.split('T')[0];
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const cleanDate = d.toISOString().split('T')[0];
     const isSimWeek = cleanDate >= '2026-06-14' && cleanDate <= '2026-06-20';
     
     // System current week calculation
@@ -71,7 +75,9 @@ export default function DashboardStats({
 
   const isMonthMatch = (dateStr?: string) => {
     if (!dateStr) return false;
-    const cleanDate = dateStr.split('T')[0];
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const cleanDate = d.toISOString().split('T')[0];
     const isSimMonth = cleanDate.startsWith('2026-06');
     const isSysMonth = cleanDate.startsWith(todayStr.slice(0, 7));
     return isSimMonth || isSysMonth;

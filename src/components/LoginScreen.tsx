@@ -105,7 +105,7 @@ export default function LoginScreen({
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="login-email" className="block text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-1.5">
-                    E-mail de Acesso
+                    Nome
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" />
@@ -113,7 +113,7 @@ export default function LoginScreen({
                       id="login-email"
                       type="text"
                       required
-                      placeholder="seu-email@dominio.com"
+                      placeholder="seu nome ou e-mail"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       className="w-full border border-neutral-200 dark:border-neutral-700 rounded-2xl pl-10 pr-3 py-2.5 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:bg-neutral-50 text-sm font-bold"

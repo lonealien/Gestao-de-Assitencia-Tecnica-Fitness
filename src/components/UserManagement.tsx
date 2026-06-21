@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppUser, AssistenciaTecnica, Tecnico, UserRole, StoreSettings } from '../types';
-import { UserPlus, Shield, Hammer, Building2, Eye, KeyRound, Check, AlertCircle, X, Trash2, User, Ban, CheckCircle } from 'lucide-react';
+import { UserPlus, Shield, Hammer, Building2, Eye, KeyRound, Check, AlertCircle, X, Trash2, User, Ban, CheckCircle, Pencil } from 'lucide-react';
 import { getStoreDomain, maskPhone } from '../utils';
 
 interface UserManagementProps {
@@ -59,14 +59,30 @@ export default function UserManagement({
   const [editIsReadOnly, setEditIsReadOnly] = useState<boolean>(false);
   const [editAssistenciaId, setEditAssistenciaId] = useState<string>('');
   const [editTecnicoId, setEditTecnicoId] = useState<string>('');
+  const [editName, setEditName] = useState<string>('');
+  const [editEmail, setEditEmail] = useState<string>('');
+  const [editPhone, setEditPhone] = useState<string>('');
+  const [editPassword, setEditPassword] = useState<string>('');
 
   const handleSaveEdit = (u: AppUser) => {
     setSuccessMsg('');
     setErrorMsg('');
 
+    if (!editName.trim() || !editEmail.trim() || !editPassword.trim()) {
+      setErrorMsg('Por favor, preencha todos os campos obrigatórios (Nome, E-mail e Senha).');
+      return;
+    }
+
+    const emailLower = editEmail.trim().toLowerCase();
+    const emailExists = usuarios.some(user => user.email.toLowerCase() === emailLower && user.id !== u.id);
+    if (emailExists) {
+      setErrorMsg('Este e-mail de acesso já está cadastrado para outro usuário.');
+      return;
+    }
+
     // Limit administrators secondary check (up to 2 secondary admins)
     if (editRole === 'ADMIN' && u.role !== 'ADMIN') {
-      const secondaryAdminsCount = usuarios.filter(user => user.role === 'ADMIN' && user.username !== 'admin').length;
+      const secondaryAdminsCount = usuarios.filter(user => user.role === 'ADMIN').length;
       if (secondaryAdminsCount >= 2) {
         setErrorMsg('Erro: Limite atingido! O sistema permite apenas até em 2 administradores secundários além do principal.');
         return;
@@ -75,15 +91,19 @@ export default function UserManagement({
 
     const updatedUser: AppUser = {
       ...u,
+      name: editName.trim(),
+      email: emailLower,
+      password: editPassword.trim(),
       role: editRole,
       isReadOnly: false,
+      phone: editPhone.trim(),
       assistenciaId: (editRole === 'TECNICO' || editRole === 'ATENDENTE' || editRole === 'ASSISTENCIA_GERENTE') ? (editAssistenciaId || u.assistenciaId || undefined) : undefined,
       tecnicoId: editRole === 'TECNICO' ? (editTecnicoId || u.tecnicoId || undefined) : undefined,
     };
 
     if (onUpdateUser) {
       onUpdateUser(updatedUser);
-      setSuccessMsg(`Permissões do usuário "${u.name}" foram atualizadas com sucesso!`);
+      setSuccessMsg(`O usuário "${editName.trim()}" foi atualizado com sucesso!`);
       setEditingUserId(null);
     } else {
       setErrorMsg('Erro: Função de atualização não configurada no aplicativo.');
@@ -112,9 +132,9 @@ export default function UserManagement({
     }
     
     // Validation
-    const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/;
+    const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ0-9\s]+$/;
     if (!nameRegex.test(name.trim())) {
-      setErrorMsg('O nome do usuário deve conter apenas letras.');
+      setErrorMsg('O nome do usuário deve conter apenas letras e números.');
       return;
     }
 
@@ -134,7 +154,7 @@ export default function UserManagement({
 
     // Limit administrators secondary check (up to 2 secondary admins)
     if (selectedRole === 'ADMIN') {
-      const secondaryAdminsCount = usuarios.filter(u => u.role === 'ADMIN' && u.username !== 'admin').length;
+      const secondaryAdminsCount = usuarios.filter(u => u.role === 'ADMIN').length;
       if (secondaryAdminsCount >= 2) {
         setErrorMsg('Erro: Limite atingido! O sistema permite apenas até em 2 administradores secundários além do principal.');
         return;
@@ -164,6 +184,7 @@ export default function UserManagement({
           username: usernameTrimmed,
           email: emailLower || `${usernameTrimmed}@gestaoservico.com`,
           password: password,
+          phone: tecPhone.trim(),
           role: 'TECNICO',
           tecnicoId: newTecId,
           assistenciaId: currentUser.assistenciaId
@@ -179,6 +200,7 @@ export default function UserManagement({
         username: usernameTrimmed,
         email: emailLower || `${usernameTrimmed}@gestaoservico.com`,
         password: password,
+        phone: tecPhone.trim(),
         role: selectedRole,
         assistenciaId: (selectedRole === 'TECNICO' || selectedRole === 'ATENDENTE' || selectedRole === 'ASSISTENCIA_GERENTE') ? (selectedAstId || currentUser.assistenciaId) : undefined,
         tecnicoId: selectedRole === 'TECNICO' ? (selectedTecId || newUserId) : undefined,
@@ -236,6 +258,10 @@ export default function UserManagement({
         {currentUser.role !== 'TECNICO' && (
           <button
             onClick={() => {
+              if (currentUser.isReadOnly) {
+                alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                return;
+              }
               setActiveForm(!activeForm);
               setErrorMsg('');
               setSuccessMsg('');
@@ -248,37 +274,6 @@ export default function UserManagement({
         )}
       </div>
 
-      {currentUser.role === 'ADMIN' && (
-        <div className="bg-neutral-100 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-700 p-4 space-y-2 rounded-2xl">
-          <p className="text-xs font-black uppercase text-neutral-900 dark:text-neutral-100 tracking-wider flex items-center gap-1.5">
-            <Shield className="w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" />
-            Regras de Hierarquia de Acesso (Administrador)
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-            <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 p-2.5 rounded-xl">
-              <span className="block font-black text-[10px] text-neutral-600 dark:text-neutral-400 uppercase">🥇 Admin Principal</span>
-              <p className="font-bold text-neutral-900 dark:text-neutral-100 mt-1">admin</p>
-              <span className="text-[10px] text-neutral-500 block leading-tight mt-1">Acesso 100% livre. Único perfil autorizado a cadastrar oficinas, abrir Ordens de Serviço (OS), modificar partes principais e fazer exclusões definitivas no sistema.</span>
-            </div>
-            <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 p-2.5 rounded-xl flex flex-col justify-between">
-              <div>
-                <span className="block font-black text-[10px] text-neutral-600 dark:text-neutral-400 uppercase">👥 Admins Secundários (Auxiliares)</span>
-                <span className="text-[10px] text-neutral-500 block leading-tight mt-1">Nível administrativo secundário com acesso parcial (visualização de painel, acompanhamento de ordens, sem poder gerar novas oficinas, técnicos ou usuários).</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between border-t border-dashed border-neutral-300 pt-1.5">
-                <span className="font-black text-[10px] uppercase">Slots Utilizados:</span>
-                <span className={`px-2 py-0.5 font-black text-xs rounded-lg ${
-                  usuarios.filter(u => u.role === 'ADMIN' && u.username !== 'admin').length >= 2 
-                    ? 'bg-rose-500 text-white dark:text-neutral-900' 
-                    : 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900'
-                }`}>
-                  {usuarios.filter(u => u.role === 'ADMIN' && u.username !== 'admin').length} / 2 Admins
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {successMsg && (
         <div className="bg-emerald-200 border border-neutral-200 dark:border-neutral-700 p-3 text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wide flex items-center gap-2">
@@ -317,7 +312,7 @@ export default function UserManagement({
 
             <div>
               <label htmlFor="user-email-input" className="block text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-1">
-                E-mail de Acesso (Login) *
+                E-mail *
               </label>
               <input
                 id="user-email-input"
@@ -423,28 +418,7 @@ export default function UserManagement({
                 </div>
               )}
 
-              {selectedRole === 'TECNICO' && (
-                <div>
-                  <label htmlFor="user-tec-select" className="block text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-1">
-                    Mecânico Cadastrado (Opcional)
-                  </label>
-                  <select
-                    id="user-tec-select"
-                    value={selectedTecId}
-                    onChange={(e) => setSelectedTecId(e.target.value)}
-                    className="w-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none"
-                  >
-                    <option value="">-- Criar novo mecânico / Vincular por ID --</option>
-                    {tecnicos
-                      .filter((t) => t.assistenciaId === (currentUser.role === 'ASSISTENCIA_GERENTE' ? currentUser.assistenciaId : selectedAstId))
-                      .map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              )}
+
             </div>
           )}
 
@@ -478,6 +452,7 @@ export default function UserManagement({
               <tr className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 uppercase font-black tracking-wider text-[10px]">
                 <th className="p-3 border-r border-neutral-700">Nome (Pessoa)</th>
                 <th className="p-3 border-r border-neutral-700">E-mail de Acesso</th>
+                <th className="p-3 border-r border-neutral-700 whitespace-nowrap">WhatsApp</th>
                 <th className="p-3 border-r border-neutral-700">Senha Acesso</th>
                 <th className="p-3 border-r border-neutral-700 text-center text-[10px]">Permissão</th>
                 <th className="p-3 border-r border-neutral-700">Responsável Vinculado</th>
@@ -492,18 +467,84 @@ export default function UserManagement({
 
                 return (
                   <tr key={u.id} className={`${i % 2 === 0 ? 'bg-white dark:bg-neutral-800' : 'bg-neutral-50'} hover:bg-neutral-100 ${isEditing ? 'bg-amber-50 dark:bg-amber-900/30 border-y-2 border-black' : ''}`}>
-                    <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-black uppercase text-neutral-900 dark:text-neutral-100">{u.name}</td>
+                    <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-black uppercase text-neutral-900 dark:text-neutral-100">
+                      {isEditing && currentUser.role === 'ADMIN' ? (
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-bold p-1 w-full focus:outline-none uppercase"
+                          placeholder="Nome"
+                        />
+                      ) : (
+                        u.name
+                      )}
+                    </td>
                     <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-mono font-bold text-neutral-600">
-                      <span className="block text-neutral-900 dark:text-neutral-100 font-black text-xs mb-0.5">{u.email || u.username}</span>
-                      {!u.active && (
-                         <span className="block text-[8px] font-black uppercase text-rose-600 bg-rose-100 mt-1 max-w-max px-1">Inativo</span>
+                      {isEditing && currentUser.role === 'ADMIN' ? (
+                        <div className="space-y-1">
+                          <input
+                            type="email"
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                            className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-bold p-1 w-full focus:outline-none font-mono"
+                            placeholder="E-mail"
+                          />
+                          {!u.active && (
+                             <span className="block text-[8px] font-black uppercase text-rose-600 bg-rose-100 max-w-max px-1">Inativo</span>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <span className="block text-neutral-900 dark:text-neutral-100 font-black text-xs mb-0.5">{u.email}</span>
+                          {!u.active && (
+                             <span className="block text-[8px] font-black uppercase text-rose-600 bg-rose-100 mt-1 max-w-max px-1">Inativo</span>
+                          )}
+                        </>
+                      )}
+                    </td>
+                    <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-mono font-bold whitespace-nowrap">
+                      {isEditing && currentUser.role === 'ADMIN' ? (
+                        <input
+                          type="text"
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(maskPhone(e.target.value))}
+                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-bold p-1 w-full focus:outline-none font-mono"
+                          placeholder="WhatsApp"
+                        />
+                      ) : (
+                        u.phone ? (
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="text-xs text-neutral-850 dark:text-neutral-205">{u.phone}</span>
+                            <a 
+                              href={`https://wa.me/${(u.phone.replace(/\D/g, '').length <= 11 && !u.phone.replace(/\D/g, '').startsWith('55')) ? '55' : ''}${u.phone.replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 bg-[#25D366] hover:bg-[#20ba5a] text-white px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer whitespace-nowrap"
+                            >
+                              📲 WhatsApp
+                            </a>
+                          </div>
+                        ) : (
+                          <span className="text-neutral-400">—</span>
+                        )
                       )}
                     </td>
                     <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-mono text-neutral-900 bg-neutral-100/50">
-                      <span className="flex items-center gap-1">
-                        <Eye className="w-3.5 h-3.5 text-neutral-500" />
-                        {u.password || '—'}
-                      </span>
+                      {isEditing && currentUser.role === 'ADMIN' ? (
+                        <input
+                          type="text"
+                          value={editPassword}
+                          onChange={(e) => setEditPassword(e.target.value)}
+                          className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-bold p-1 w-full focus:outline-none font-mono"
+                          placeholder="Senha"
+                        />
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <Eye className="w-3.5 h-3.5 text-neutral-500" />
+                          {u.password || '—'}
+                        </span>
+                      )}
                     </td>
                     <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 text-center min-w-[170px]">
                       {isEditing ? (
@@ -532,16 +573,17 @@ export default function UserManagement({
                       ) : (
                         <>
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-[9px] font-black uppercase ${
-                            u.role === 'ADMIN' ? (u.username === 'admin' ? 'bg-amber-300 dark:bg-amber-400 text-neutral-900' : 'bg-rose-200 text-neutral-900 dark:text-neutral-100')
+                            u.role === 'ADMIN' ? 'bg-rose-200 text-neutral-900 dark:text-neutral-100'
                             : u.role === 'ASSISTENCIA_GERENTE' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-neutral-900 dark:text-neutral-100' 
                             : u.role === 'ATENDENTE' ? 'bg-blue-200 text-neutral-900 dark:text-neutral-100'
+                            : u.role === 'MASTER' ? 'bg-amber-300 dark:bg-amber-400 text-neutral-900'
                             : 'bg-emerald-200 text-neutral-900 dark:text-neutral-100'
                           }`}>
-                            {u.role === 'ADMIN' && <Shield className="w-3 h-3" />}
+                            {(u.role === 'ADMIN' || u.role === 'MASTER') && <Shield className="w-3 h-3" />}
                             {u.role === 'ASSISTENCIA_GERENTE' && <Building2 className="w-3 h-3" />}
                             {u.role === 'TECNICO' && <Hammer className="w-3 h-3" />}
                             {u.role === 'ATENDENTE' && <User className="w-3 h-3" />}
-                            {u.role === 'ADMIN' ? (u.username === 'admin' ? 'ADMIN MASTER' : 'ADMIN') : u.role}
+                            {u.role === 'MASTER' ? 'ADMIN MASTER' : u.role}
                           </span>
                         </>
                       )}
@@ -638,11 +680,44 @@ export default function UserManagement({
                             <span className="text-[10px] text-amber-600 uppercase font-black tracking-wider">Principal (Bloqueado)</span>
                           ) : (
                             <div className="flex flex-col sm:flex-row justify-center items-center gap-1.5">
-                              {(currentUser.role === 'ADMIN' || currentUser.role === 'ASSISTENCIA_GERENTE') && (
+                              {currentUser.role === 'ADMIN' && (
                                 <button
                                   type="button"
                                   onClick={() => {
+                                    if (currentUser.isReadOnly) {
+                                      alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                      return;
+                                    }
                                     setEditingUserId(u.id);
+                                    setEditName(u.name);
+                                    setEditEmail(u.email);
+                                    setEditPhone(u.phone || '');
+                                    setEditPassword(u.password || '');
+                                    setEditRole(u.role);
+                                    setEditIsReadOnly(u.isReadOnly || false);
+                                    setEditAssistenciaId(u.assistenciaId || '');
+                                    setEditTecnicoId(u.tecnicoId || '');
+                                  }}
+                                  className="bg-amber-400 dark:bg-amber-500 hover:bg-amber-500 dark:hover:bg-amber-600 text-neutral-900 text-[9px] font-black uppercase tracking-wider px-2 py-1 border border-neutral-300 dark:border-neutral-700 rounded-2xl transition-all cursor-pointer flex items-center gap-1 shadow-sm hover:shadow-md"
+                                  title="Editar Usuário"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                  Editar
+                                </button>
+                              )}
+                              {currentUser.role === 'ASSISTENCIA_GERENTE' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (currentUser.isReadOnly) {
+                                      alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                      return;
+                                    }
+                                    setEditingUserId(u.id);
+                                    setEditName(u.name);
+                                    setEditEmail(u.email);
+                                    setEditPhone(u.phone || '');
+                                    setEditPassword(u.password || '');
                                     setEditRole(u.role);
                                     setEditIsReadOnly(u.isReadOnly || false);
                                     setEditAssistenciaId(u.assistenciaId || '');
@@ -658,7 +733,13 @@ export default function UserManagement({
                               
                               <button
                                 type="button"
-                                onClick={() => onToggleUserActive(u.id)}
+                                onClick={() => {
+                                  if (currentUser.isReadOnly) {
+                                    alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                    return;
+                                  }
+                                  onToggleUserActive(u.id);
+                                }}
                                 className={`p-1.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl transition-colors cursor-pointer ${u.active !== false ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 hover:bg-emerald-200' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}`}
                                 title={u.active !== false ? "Desativar Conta" : "Ativar Conta"}
                               >
@@ -669,6 +750,10 @@ export default function UserManagement({
                                 <button
                                   type="button"
                                   onClick={() => {
+                                    if (currentUser.isReadOnly) {
+                                      alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                      return;
+                                    }
                                     setDeleteConfirm({
                                       title: "Confirmar Exclusão de Usuário",
                                       message: `Deseja realmente excluir permanentemente o usuário "${u.name}"? Esta ação não pode ser desfeita.`,
@@ -706,7 +791,19 @@ export default function UserManagement({
                 <div className="flex justify-between items-start">
                   <div>
                     <h5 className="font-black uppercase text-neutral-900 dark:text-neutral-100 text-sm">{u.name}</h5>
-                    <p className="font-mono text-[10px] text-neutral-500">{u.username} • {u.email}</p>
+                    <p className="font-mono text-[10px] text-neutral-500">{u.email}</p>
+                    {u.phone && (
+                      <div className="mt-1">
+                        <a 
+                          href={`https://wa.me/${(u.phone.replace(/\D/g, '').length <= 11 && !u.phone.replace(/\D/g, '').startsWith('55')) ? '55' : ''}${u.phone.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 bg-[#25D366] hover:bg-[#20ba5a] text-white px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer whitespace-nowrap"
+                        >
+                          📲 WhatsApp ({u.phone})
+                        </a>
+                      </div>
+                    )}
                   </div>
                   <span className={`px-2 py-0.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-[9px] font-black uppercase ${
                     u.role === 'ADMIN' ? 'bg-amber-300 text-neutral-900' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'
@@ -754,7 +851,7 @@ export default function UserManagement({
                         }
                       });
                     }}
-                    disabled={u.username === 'admin'}
+                    disabled={u.role === 'MASTER'}
                     className="p-2 bg-rose-100 text-rose-600 rounded-xl disabled:opacity-30 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />

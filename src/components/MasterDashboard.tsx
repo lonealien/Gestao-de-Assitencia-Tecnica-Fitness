@@ -5,7 +5,7 @@ import {
   Search, ShieldAlert, CheckCircle, Ban, X, KeyRound, LogOut, Sun, Moon
 } from 'lucide-react';
 import { AssistenciaTecnica, OrdemServico, Tecnico, AppUser } from '../types';
-import { maskPhone, maskDocument } from '../utils';
+import { maskPhone, maskDocument, maskCEP } from '../utils';
 
 interface MasterDashboardProps {
   assistencias: AssistenciaTecnica[];
@@ -71,7 +71,7 @@ export default function MasterDashboard({
   const [astZipCode, setAstZipCode] = useState('');
   
   // New Admin User credentials for the brand-new assistencas
-  const [adminUsername, setAdminUsername] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminName, setAdminName] = useState('');
 
@@ -113,15 +113,15 @@ export default function MasterDashboard({
     setSuccessMsg('');
     setErrorMsg('');
 
-    if (!astName.trim() || !astCity.trim() || !adminUsername.trim() || !adminPassword.trim()) {
+    if (!astName.trim() || !astCity.trim() || !adminEmail.trim() || !adminPassword.trim()) {
       triggerErrorMsg('Por favor, preencha os campos obrigatórios (*).');
       return;
     }
 
-    const usernameLower = adminUsername.trim().toLowerCase();
-    const usernameExists = usuarios.some(u => u.username?.toLowerCase() === usernameLower);
-    if (usernameExists) {
-      triggerErrorMsg('O nome de usuário administrativo já está cadastrado no sistema.');
+    const emailLower = adminEmail.trim().toLowerCase();
+    const emailExists = usuarios.some(u => u.email?.toLowerCase() === emailLower);
+    if (emailExists) {
+      triggerErrorMsg('O e-mail administrativo já está cadastrado no sistema.');
       return;
     }
 
@@ -137,7 +137,7 @@ export default function MasterDashboard({
       id: newAstId,
       name: astName.trim(),
       phone: astPhone.trim() || '(00) 00000-0000',
-      email: astEmail.trim() || `${usernameLower}@system.com`,
+      email: astEmail.trim() || `${emailLower}`,
       address: astAddress.trim() || 'Sem Endereço cadastrado',
       city: astCity.trim(),
       state: astState.trim().toUpperCase() || 'SP',
@@ -150,8 +150,8 @@ export default function MasterDashboard({
     const newAdminUser: AppUser = {
       id: newUserId,
       name: adminName.trim() || `Admin ${astName.trim()}`,
-      username: usernameLower,
-      email: astEmail.trim() || `${usernameLower}@system.com`,
+      username: emailLower,
+      email: emailLower,
       password: adminPassword.trim(),
       role: 'ADMIN',
       assistenciaId: newAstId,
@@ -161,7 +161,7 @@ export default function MasterDashboard({
     onAddAssistencia(newAssistencia);
     onAddUser(newAdminUser);
 
-    triggerSuccessMsg(`Assistência "${astName}" cadastrada com Admin "${usernameLower}"! Acesso liberado por 30 dias.`);
+    triggerSuccessMsg(`Assistência "${astName}" cadastrada com Admin "${emailLower}"! Acesso liberado por 30 dias.`);
     
     // Clear Form
     setAstName('');
@@ -172,7 +172,7 @@ export default function MasterDashboard({
     setAstCity('');
     setAstState('');
     setAstZipCode('');
-    setAdminUsername('');
+    setAdminEmail('');
     setAdminPassword('');
     setAdminName('');
     setShowAddForm(false);
@@ -222,18 +222,23 @@ export default function MasterDashboard({
 
   // 2. Extend Credits (+30 days)
   const handleExtendCredits = (ast: AssistenciaTecnica, days = 30) => {
-    const currentExp = ast.expiresAt ? new Date(ast.expiresAt) : new Date();
-    const baseDate = currentExp < new Date() ? new Date() : currentExp; // Se expirado, inicia do dia de hoje
-    
-    baseDate.setDate(baseDate.getDate() + days);
-    
-    const updatedAst: AssistenciaTecnica = {
-      ...ast,
-      expiresAt: baseDate.toISOString()
-    };
+    try {
+      const currentExp = ast.expiresAt ? new Date(ast.expiresAt) : new Date();
+      const baseDate = currentExp < new Date() ? new Date() : currentExp; // Se expirado, inicia do dia de hoje
+      
+      baseDate.setDate(baseDate.getDate() + days);
+      
+      const updatedAst: AssistenciaTecnica = {
+        ...ast,
+        expiresAt: baseDate.toISOString()
+      };
 
-    onUpdateAssistencia(updatedAst);
-    triggerSuccessMsg(`Assistência "${ast.name}" recebeu +${days} dias de crédito! Vencimento em ${baseDate.toLocaleDateString('pt-BR')}`);
+      onUpdateAssistencia(updatedAst);
+      triggerSuccessMsg(`Assistência "${ast.name}" recebeu +${days} dias de crédito! Vencimento em ${baseDate.toLocaleDateString('pt-BR')}`);
+    } catch(err) {
+      console.error(err);
+      triggerErrorMsg('Falha ao estender créditos.');
+    }
   };
 
   // Custom End Date Update
@@ -254,45 +259,55 @@ export default function MasterDashboard({
     }
   };
 
-  // 3. Toggle Assistência block status manually
+    // 3. Toggle Assistência block status manually
   const handleToggleAssistencia = (ast: AssistenciaTecnica) => {
-    const updatedAst: AssistenciaTecnica = {
-      ...ast,
-      active: ast.active !== false ? false : true
-    };
-    onUpdateAssistencia(updatedAst);
-    triggerSuccessMsg(`Status de "${ast.name}" alterado para ${updatedAst.active ? 'Ativo' : 'Bloqueado'}!`);
+    try {
+      const updatedAst: AssistenciaTecnica = {
+        ...ast,
+        active: ast.active !== false ? false : true
+      };
+      onUpdateAssistencia(updatedAst);
+      triggerSuccessMsg(`Status de "${ast.name}" alterado para ${updatedAst.active ? 'Ativo' : 'Bloqueado'}!`);
+    } catch (err) {
+      console.error(err);
+      triggerErrorMsg('Falha ao alterar status da assistência.');
+    }
   };
 
   // 4. Per-Assistencia Backup Generation (.json)
   const handleBackupDownload = (ast: AssistenciaTecnica) => {
-    const astOrdens = ordens.filter(o => o.assistenciaId === ast.id);
-    const astTecnicos = tecnicos.filter(t => t.assistenciaId === ast.id);
-    const astUsuarios = usuarios.filter(u => u.assistenciaId === ast.id);
+    try {
+      const astOrdens = ordens.filter(o => o.assistenciaId === ast.id);
+      const astTecnicos = tecnicos.filter(t => t.assistenciaId === ast.id);
+      const astUsuarios = usuarios.filter(u => u.assistenciaId === ast.id);
 
-    const backupObj = {
-      type: 'assistencia_backup',
-      version: '1.0',
-      timestamp: new Date().toISOString(),
-      assistencia: ast,
-      ordens: astOrdens,
-      tecnicos: astTecnicos,
-      usuarios: astUsuarios
-    };
+      const backupObj = {
+        type: 'assistencia_backup',
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        assistencia: ast,
+        ordens: astOrdens,
+        tecnicos: astTecnicos,
+        usuarios: astUsuarios
+      };
 
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(backupObj, null, 2)
-    )}`;
-    
-    const downloadAnchor = document.createElement('a');
-    const safeName = ast.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    downloadAnchor.setAttribute('href', jsonString);
-    downloadAnchor.setAttribute('download', `backup_${safeName}_${new Date().toISOString().split('T')[0]}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(backupObj, null, 2)
+      )}`;
+      
+      const downloadAnchor = document.createElement('a');
+      const safeName = ast.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      downloadAnchor.setAttribute('href', jsonString);
+      downloadAnchor.setAttribute('download', `backup_${safeName}_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
 
-    triggerSuccessMsg(`Backup de "${ast.name}" exportado com sucesso!`);
+      triggerSuccessMsg(`Backup de "${ast.name}" exportado com sucesso!`);
+    } catch (err) {
+      console.error(err);
+      triggerErrorMsg('Falha ao gerar backup.');
+    }
   };
 
   // 5. Per-Assistencia Backup Upload / RESTORE
@@ -651,7 +666,7 @@ export default function MasterDashboard({
                   <div>
                     <label className="block text-[10px] font-black uppercase mb-1">CEP</label>
                     <input 
-                      type="text" value={astZipCode} onChange={e => setAstZipCode(e.target.value)}
+                      type="text" value={astZipCode} onChange={e => setAstZipCode(maskCEP(e.target.value))}
                       placeholder="Ex: 20000-000"
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 p-2.5 text-xs font-bold rounded-xl"
                     />
@@ -688,10 +703,10 @@ export default function MasterDashboard({
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black uppercase mb-1">Usuário / Login * (Sem espaços)</label>
+                    <label className="block text-[10px] font-black uppercase mb-1">E-mail de Acesso *</label>
                     <input 
-                      type="text" required value={adminUsername} onChange={e => setAdminUsername(e.target.value)}
-                      placeholder="Ex: carlos_admin"
+                      type="email" required value={adminEmail} onChange={e => setAdminEmail(e.target.value)}
+                      placeholder="Ex: carlos@empresa.com"
                       className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 p-2.5 text-xs font-bold rounded-xl"
                     />
                   </div>
@@ -870,13 +885,7 @@ export default function MasterDashboard({
                 <Users className="w-5 h-5 text-neutral-900 dark:text-neutral-100" />
                 Segurança: Contas de Usuários no Sistema ({searchedUsuarios.length} Contas)
               </h3>
-              <button
-                onClick={() => setShowAddUserForm(!showAddUserForm)}
-                className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-neutral-800 text-xs font-black uppercase tracking-widest px-4 py-2 border border-neutral-200 dark:border-neutral-700 rounded-xl transition-all flex items-center gap-2 cursor-pointer self-start sm:self-center"
-              >
-                {showAddUserForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4 stroke-[2.5]" />}
-                {showAddUserForm ? 'Cancelar' : 'Cadastrar Administrador'}
-              </button>
+
             </div>
 
             {showAddUserForm && (
@@ -957,11 +966,10 @@ export default function MasterDashboard({
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 uppercase font-black leading-none text-[10px]">
-                    <th className="p-3 border-r border-neutral-700">Pessoa / Name</th>
-                    <th className="p-3 border-r border-neutral-700">Login / Username</th>
+                    <th className="p-3 border-r border-neutral-700">NOME / EMPRESA</th>
                     <th className="p-3 border-r border-neutral-700">E-mail de Acesso</th>
+                    <th className="p-3 border-r border-neutral-700 whitespace-nowrap">WhatsApp</th>
                     <th className="p-3 border-r border-neutral-700">Senha Acesso</th>
-                    <th className="p-3 border-r border-neutral-700">Oficina Associada</th>
                     <th className="p-3 border-r border-neutral-700 text-center">Permissão</th>
                     <th className="p-3 text-center">Remover</th>
                   </tr>
@@ -974,11 +982,25 @@ export default function MasterDashboard({
                         <td className="p-3 font-black text-neutral-900 dark:text-neutral-100 border-r border-neutral-200 dark:border-neutral-700 uppercase">
                           {u.name}
                         </td>
-                        <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-mono">
-                          {u.username}
-                        </td>
                         <td className="p-3 border-r border-neutral-200 dark:border-neutral-700">
                           {u.email}
+                        </td>
+                        <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-mono font-bold whitespace-nowrap">
+                          {u.phone ? (
+                            <div className="flex flex-col items-start gap-1">
+                              <span className="text-xs text-neutral-850 dark:text-neutral-205">{u.phone}</span>
+                              <a 
+                                href={`https://wa.me/${(u.phone.replace(/\D/g, '').length <= 11 && !u.phone.replace(/\D/g, '').startsWith('55')) ? '55' : ''}${u.phone.replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 bg-[#25D366] hover:bg-[#20ba5a] text-white px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer whitespace-nowrap"
+                              >
+                                📲 WhatsApp
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="text-neutral-400">—</span>
+                          )}
                         </td>
                         <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-mono bg-neutral-100/30 text-neutral-900 dark:text-neutral-150 text-xs">
                           <div className="flex flex-col gap-1 items-start">
@@ -994,10 +1016,6 @@ export default function MasterDashboard({
                               <KeyRound className="w-2.5 h-2.5" /> Editar Email/Senha
                             </button>
                           </div>
-                        </td>
-                        <td className="p-3 border-r border-neutral-200 dark:border-neutral-700">
-                          <span className="block font-black uppercase text-[10px]">{ast ? ast.name : 'ACESSO GLOBAL'}</span>
-                          <span className="text-[9px] text-neutral-400 font-mono uppercase">{u.assistenciaId || 'Master (None)'}</span>
                         </td>
                         <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 text-center">
                           <span className={`inline-block px-2 py-0.5 rounded-2xl text-[9px] font-black uppercase ${
@@ -1049,8 +1067,6 @@ export default function MasterDashboard({
               <div>
                 <p className="text-[10px] uppercase font-black text-neutral-400">Nome:</p>
                 <p className="text-xs font-bold font-sans">{passwordEditingUser.name}</p>
-                <p className="text-[10px] uppercase font-black text-neutral-400 mt-2">Login / Username:</p>
-                <p className="text-xs font-bold font-mono">@{passwordEditingUser.username}</p>
               </div>
               <div>
                 <label className="block text-[10px] uppercase font-black text-neutral-400 mb-1">E-mail de Acesso *</label>
@@ -1101,7 +1117,7 @@ export default function MasterDashboard({
                       password: newAdminPasswordInput.trim()
                     };
                     onAddUser(updatedUsr);
-                    triggerSuccessMsg(`Dados de acesso do administrador @${passwordEditingUser.username} alterados com sucesso!`);
+                    triggerSuccessMsg(`Dados de acesso do administrador ${passwordEditingUser.name} alterados com sucesso!`);
                     setPasswordEditingUser(null);
                     setNewAdminEmailInput('');
                     setNewAdminPasswordInput('');

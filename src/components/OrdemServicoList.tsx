@@ -3,7 +3,7 @@ import { OrdemServico, AssistenciaTecnica, Tecnico, OSStatus, OSHistory, UserRol
 import { 
   Search, Filter, Eye, Hammer, ClipboardCheck, Clock, AlertTriangle, 
   User, CheckCircle, Ban, MessageSquarePlus, PenTool, Check, MapPin, 
-  Sparkles, ShieldAlert, History, Plus, Trash2, FileText, Download, Image as ImageIcon, ExternalLink, Navigation, DollarSign, Camera, X
+  Sparkles, ShieldAlert, History, Plus, Trash2, FileText, Download, Image as ImageIcon, ExternalLink, Navigation, DollarSign, Camera, X, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -107,6 +107,7 @@ export default function OrdemServicoList({
   const [editFotosDepois, setEditFotosDepois] = useState<string[]>([]);
 
   const [expandedOSId, setExpandedOSId] = useState<string | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
   const [osToExport, setOsToExport] = useState<OrdemServico | null>(null);
   const [isExportingImage, setIsExportingImage] = useState(false);
@@ -186,7 +187,10 @@ export default function OrdemServicoList({
   if (currentRole === 'ASSISTENCIA_GERENTE' && activeRoleEntityId) {
     scopedOrdens = ordens.filter(o => o.assistenciaId === activeRoleEntityId);
   } else if (currentRole === 'TECNICO' && activeRoleEntityId) {
-    scopedOrdens = ordens.filter(o => o.tecnicoId === activeRoleEntityId);
+    scopedOrdens = ordens.filter(o => 
+      o.tecnicoId === activeRoleEntityId && 
+      o.status !== 'Concluída'
+    );
   }
 
   // 2. Filter based on Search and Filter Dropdowns
@@ -233,6 +237,10 @@ export default function OrdemServicoList({
   };
 
   const handleApplyUpdate = (os: OrdemServico) => {
+    if (isReadOnly) {
+      alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+      return;
+    }
     const hasVisitDateChanged = editScheduledVisitDate !== (os.scheduledVisitDate || '');
     const hasCompletionDateChanged = editCompletionDate !== (os.completionDate || '');
 
@@ -581,18 +589,29 @@ export default function OrdemServicoList({
   return (
     <div className="space-y-6">
 
-      {/* Agenda Quick Navigation */}
-      <div className="bg-neutral-100 dark:bg-neutral-800/40 border-2 border-neutral-200 dark:border-neutral-700 p-5 shadow-sm dark:shadow-none space-y-3 rounded-2xl">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-neutral-200 dark:border-neutral-700 pb-2 gap-2">
-          <h4 className="text-sm font-black uppercase text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
-            <Clock className="w-5 h-5 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" />
-            Agenda & Atendimentos Diários
-          </h4>
-          <span className="text-[10px] bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-2 py-0.5 font-black uppercase inline-block self-start">
-            Filtro de Calendário
-          </span>
+      {/* Agenda Quick Navigation or Technician Info Banner */}
+      {currentRole === 'TECNICO' ? (
+        <div className="bg-emerald-50 dark:bg-neutral-800/60 border-2 border-emerald-500/30 p-5 shadow-sm rounded-2xl flex items-center gap-4">
+          <span className="text-3xl shrink-0 select-none">🛠️</span>
+          <div>
+            <h4 className="text-sm font-black uppercase text-neutral-900 dark:text-neutral-100 tracking-wider">Suas Atribuições de Hoje</h4>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold uppercase mt-1 leading-snug">
+              Exibindo apenas ordens de serviço agendadas para <span className="text-emerald-600 dark:text-emerald-400">hoje ({new Date().toLocaleDateString('pt-BR')})</span> com o status <span className="text-rose-600 dark:text-rose-400">Pendente</span> para atendimento.
+            </p>
+          </div>
         </div>
-          
+      ) : (
+        <div className="bg-neutral-100 dark:bg-neutral-800/40 border-2 border-neutral-200 dark:border-neutral-700 p-5 shadow-sm dark:shadow-none space-y-3 rounded-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-neutral-200 dark:border-neutral-700 pb-2 gap-2">
+            <h4 className="text-sm font-black uppercase text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+              <Clock className="w-5 h-5 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" />
+              Agenda & Atendimentos Diários
+            </h4>
+            <span className="text-[10px] bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-2 py-0.5 font-black uppercase inline-block self-start">
+              Filtro de Calendário
+            </span>
+          </div>
+            
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mr-2">Filtrar Atendimentos:</span>
             <button
@@ -648,47 +667,50 @@ export default function OrdemServicoList({
             {dateAgendaFilter === 'Específica' && specificDate && `📅 Filtrando visitas agendadas para o dia: ${new Date(specificDate + 'T00:00:00').toLocaleDateString('pt-BR')}`}
           </div>
         </div>
+      )}
       
       {/* Search and Filters Hub */}
-      <div className="bg-neutral-100 dark:bg-neutral-800/40 border-2 border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm dark:shadow-none p-5">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          
-          <div className="md:col-span-2 space-y-1.5">
-            <label htmlFor="search-input" className="text-xs font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-wider block">Buscar Ordem de Serviço</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-3.5 w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" />
-              <input
-                id="search-input"
-                type="text"
-                placeholder="Busque por OS, cliente, defeito, marca..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 text-sm font-bold focus:outline-none focus:bg-neutral-50 dark:focus:bg-neutral-750 placeholder-neutral-400 dark:placeholder-neutral-500"
-              />
+      {currentRole !== 'TECNICO' && (
+        <div className="bg-neutral-100 dark:bg-neutral-800/40 border-2 border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm dark:shadow-none p-5">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            
+            <div className="md:col-span-2 space-y-1.5">
+              <label htmlFor="search-input" className="text-xs font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-wider block">Buscar Ordem de Serviço</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-3.5 w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" />
+                <input
+                  id="search-input"
+                  type="text"
+                  placeholder="Busque por OS, cliente, defeito, marca..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 text-sm font-bold focus:outline-none focus:bg-neutral-50 dark:focus:bg-neutral-750 placeholder-neutral-400 dark:placeholder-neutral-500"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 md:col-span-2">
+              <label htmlFor="status-filter" className="text-xs font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-wider flex items-center gap-1.5">
+                <Filter className="w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" /> Filtro Status
+              </label>
+              <select
+                id="status-filter"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full py-2.5 px-3 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 text-sm font-bold focus:outline-none"
+              >
+                <option value="Todos">Todos os Status</option>
+                <option value="Pendente">Pendentes</option>
+                <option value="Em Análise">Em Análise</option>
+                <option value="Aguardando Peças">Aguardando Peças</option>
+                <option value="Em Conserto">Em Conserto</option>
+                <option value="Concluída">Concluídas (Finalizado)</option>
+                <option value="Cancelada">Canceladas</option>
+              </select>
             </div>
           </div>
-
-          <div className="space-y-1.5">
-            <label htmlFor="status-filter" className="text-xs font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-wider flex items-center gap-1.5">
-              <Filter className="w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" /> Filtro Status
-            </label>
-            <select
-              id="status-filter"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full py-2.5 px-3 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 text-sm font-bold focus:outline-none"
-            >
-              <option value="Todos">Todos os Status</option>
-              <option value="Pendente">Pendentes</option>
-              <option value="Em Análise">Em Análise</option>
-              <option value="Aguardando Peças">Aguardando Peças</option>
-              <option value="Em Conserto">Em Conserto</option>
-              <option value="Concluída">Concluídas (Finalizado)</option>
-              <option value="Cancelada">Canceladas</option>
-            </select>
-          </div>
         </div>
-      </div>
+      )}
 
       {/* Grid of OS cards */}
       {finalFilteredOrdens.length === 0 ? (
@@ -712,43 +734,93 @@ export default function OrdemServicoList({
                 className="bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm dark:shadow-none overflow-hidden transition-all duration-150 relative"
               >
                 {/* Banner accent */}
-                <div className={`h-2.5 w-full bg-neutral-900 dark:bg-neutral-100 border-b border-neutral-200 dark:border-neutral-700`} />
+                <div className="h-2.5 w-full bg-neutral-900 dark:bg-neutral-100 border-b border-neutral-200 dark:border-neutral-700" />
 
                 {(() => {
                   const visitDate = os.scheduledVisitDate;
                   const compDate = os.completionDate;
+                  const isCollapsedView = true;
+                  const isCardExpanded = !isCollapsedView || !!expandedCards[os.id] || isEditingThisOS;
 
                   return (
-                    <div className="p-6 space-y-5">
-                      {/* Card Header row */}
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b-2 border-neutral-100 pb-4">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span className="text-2xl font-black font-mono tracking-tight text-neutral-900 dark:text-neutral-100">{os.idFormatado}</span>
-                          <span className={`text-xs font-black uppercase tracking-wider px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl ${getStatusColor(os.status)}`}>
-                            {os.status}
-                          </span>
-                        </div>
+                    <div>
+                      {/* Interactive Button for Collapsed/Expandable View */}
+                      {isCollapsedView && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedCards(prev => ({ ...prev, [os.id]: !prev[os.id] }))}
+                          className="w-full text-left p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/40 transition-all cursor-pointer select-none border-b border-neutral-100 dark:border-neutral-700/50"
+                        >
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-mono font-black text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xs">
+                              <span>⚙️ OS #{os.idFormatado}</span>
+                            </div>
 
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-xs font-black">
-                          {visitDate && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-neutral-500 uppercase tracking-widest font-black text-[10px]">Agendado para:</span>
-                              <span className="px-3 py-1.5 border-2 border-black dark:border-neutral-700 rounded-2xl font-black text-sm font-mono bg-amber-300 text-neutral-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-                                {visitDate.split('-').reverse().join('/')}
+                            <div>
+                              <span className="text-[8px] font-black text-neutral-400 block uppercase tracking-widest leading-none mb-0.5">Cliente</span>
+                              <span className="text-sm font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-tight block truncate max-w-[200px] sm:max-w-[320px]">
+                                {os.clientName}
                               </span>
                             </div>
-                          )}
-                          
-                          {compDate && (
-                             <div className="flex items-center gap-2">
-                              <span className="text-neutral-500 uppercase tracking-widest font-black text-[10px]">Finalizado em:</span>
-                              <span className="px-3 py-1.5 border-2 border-neutral-900 dark:border-neutral-200 rounded-2xl font-black text-sm font-mono bg-emerald-300 text-neutral-900 shadow-[3px_3px_0px_0px_rgba(16,185,129,0.3)]">
-                                {compDate.split('-').reverse().join('/')}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3 sm:gap-5 ml-auto sm:ml-0">
+                            {visitDate && (
+                              <div className="text-right">
+                                <span className="text-[8px] font-black text-neutral-400 block uppercase tracking-widest leading-none mb-0.5">Visita Agendada</span>
+                                <span className="text-xs font-mono font-black text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-600">
+                                  {visitDate.split('-').reverse().join('/')}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="text-right">
+                              <span className="text-[8px] font-black text-neutral-400 block uppercase tracking-widest leading-none mb-0.5 text-right font-bold">Status OS</span>
+                              <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 block ${getStatusColor(os.status)}`}>
+                                {os.status}
                               </span>
                             </div>
+
+                            <div className="bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 p-1.5 rounded-xl transition-all ml-1 text-neutral-600 dark:text-neutral-300">
+                              {isCardExpanded ? <ChevronUp className="w-4 h-4 stroke-[2.5]" /> : <ChevronDown className="w-4 h-4 stroke-[2.5]" />}
+                            </div>
+                          </div>
+                        </button>
+                      )}
+
+                      {isCardExpanded && (
+                        <div className="p-6 space-y-5">
+                          {/* Card Header row - only rendered if not in collapsed mode */}
+                          {!isCollapsedView && (
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b-2 border-neutral-100 pb-4">
+                              <div className="flex flex-wrap items-center gap-3">
+                                <span className="text-2xl font-black font-mono tracking-tight text-neutral-900 dark:text-neutral-100">{os.idFormatado}</span>
+                                <span className={`text-xs font-black uppercase tracking-wider px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl ${getStatusColor(os.status)}`}>
+                                  {os.status}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-xs font-black">
+                                {visitDate && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-neutral-500 uppercase tracking-widest font-black text-[10px]">Agendado para:</span>
+                                    <span className="px-3 py-1.5 border-2 border-black dark:border-neutral-700 rounded-2xl font-black text-sm font-mono bg-amber-300 text-neutral-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                                      {visitDate.split('-').reverse().join('/')}
+                                    </span>
+                                  </div>
+                                )}
+                                
+                                {compDate && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-neutral-500 uppercase tracking-widest font-black text-[10px]">Finalizado em:</span>
+                                    <span className="px-3 py-1.5 border-2 border-neutral-900 dark:border-neutral-200 rounded-2xl font-black text-sm font-mono bg-emerald-300 text-neutral-900 shadow-[3px_3px_0px_0px_rgba(16,185,129,0.3)]">
+                                      {compDate.split('-').reverse().join('/')}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           )}
-                        </div>
-                      </div>
 
                   {/* Core Content Row: Equipment and Client Info */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -795,11 +867,24 @@ export default function OrdemServicoList({
                     <div className="space-y-4">
                       <div>
                         <h4 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-1.5">
-                          <User className="w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" /> Proprietário & Logística
+                          <User className="w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" /> Cliente
                         </h4>
                         <p className="text-lg font-black text-neutral-900 dark:text-neutral-100 mt-1.5 uppercase tracking-tight bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-3 py-1 inline-block rounded-lg shadow-sm">{os.clientName}</p>
                         {os.clientDocument && <p className="text-xs font-mono font-bold text-neutral-500 uppercase tracking-tight mt-1">CPF/CNPJ: {os.clientDocument}</p>}
                         <p className="text-xs font-bold text-neutral-600 mt-1 uppercase tracking-tight">{os.clientPhone} • {os.clientEmail || 'Sem e-mail cadastrado'}</p>
+                        {os.clientPhone && os.clientPhone.replace(/\D/g, '') !== '' && (
+                          <div className="mt-2.5">
+                            <a 
+                              href={`https://wa.me/${(os.clientPhone.replace(/\D/g, '').length <= 11 && !os.clientPhone.replace(/\D/g, '').startsWith('55')) ? '55' : ''}${os.clientPhone.replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 bg-[#25D366] hover:bg-[#20ba5a] text-white px-3 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer"
+                              title="Chamar no WhatsApp"
+                            >
+                              <span className="text-xs">📲</span> Conversar no WhatsApp
+                            </a>
+                          </div>
+                        )}
                         <div className="flex flex-col gap-2 mt-2.5">
                           <p className="text-xs font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800/80 p-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl">
                             <MapPin className="w-4 h-4 text-black dark:text-neutral-100 shrink-0 stroke-[2.5]" />
@@ -918,9 +1003,13 @@ export default function OrdemServicoList({
                       )}
 
                       {/* Update Action button */}
-                      {!isEditingThisOS && (!isReadOnly || currentRole === 'ADMIN') && (
+                      {!isEditingThisOS && (
                         <button
                           onClick={() => {
+                            if (isReadOnly) {
+                              alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                              return;
+                            }
                             setSelectedOSId(os.id);
                             if (currentRole === 'TECNICO' && os.status === 'Pendente') {
                               setNewStatus('Em Conserto');
@@ -959,6 +1048,10 @@ export default function OrdemServicoList({
                       {(currentRole === 'ADMIN' || currentRole === 'MASTER') && onDeleteOS && (
                         <button
                           onClick={() => {
+                            if (isReadOnly) {
+                              alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                              return;
+                            }
                             setDeleteConfirm({
                               title: "Confirmar Exclusão de OS",
                               message: `Deseja realmente excluir permanentemente a Ordem de Serviço ${os.idFormatado || os.id}?\n\nEsta ação apagará todo o histórico e peças vinculadas de forma irreversível.\n\nDigite a senha para confirmar:`,
@@ -1475,7 +1568,8 @@ export default function OrdemServicoList({
                             </div>
                           </div>
                         )}
-
+                      </div>
+                    )}
                   </div>
                 );
               })()}
@@ -1608,7 +1702,7 @@ export default function OrdemServicoList({
                 <span className="block text-[8px] font-black text-neutral-500 uppercase tracking-widest">Identificação do Cliente</span>
                 <div className="grid grid-cols-2 gap-2 font-bold select-none">
                   <div>
-                    <span className="block text-[7.5px] uppercase text-neutral-400">Proprietário / CPF-CNPJ</span>
+                    <span className="block text-[7.5px] uppercase text-neutral-400">Cliente / CPF-CNPJ</span>
                     <span className="text-sm uppercase text-neutral-900 dark:text-neutral-100 font-extrabold bg-neutral-200 dark:bg-neutral-800 px-1 rounded">
                       {osToExport.clientName} {osToExport.clientDocument && <span className="font-mono text-neutral-500 font-normal ml-1">({osToExport.clientDocument})</span>}
                     </span>

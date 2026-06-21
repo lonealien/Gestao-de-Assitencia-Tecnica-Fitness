@@ -117,6 +117,7 @@ export interface AppUser {
   username?: string;
   email: string;
   password?: string;
+  phone?: string;
   role: UserRole;
   assistenciaId?: string;
   tecnicoId?: string;

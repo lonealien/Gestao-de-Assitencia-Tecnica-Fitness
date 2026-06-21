@@ -143,7 +143,7 @@ export default function OrdemServicoForm({
         {/* Section 1: Cliente info */}
         <div className="space-y-3">
           <h4 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest border-b-2 border-neutral-100 pb-1 flex items-center gap-1.5">
-            <User className="w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" /> Informações Gerais do Proprietário / Cliente
+            <User className="w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" /> Informações Gerais do Cliente
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1">
