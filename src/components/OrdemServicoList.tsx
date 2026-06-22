@@ -794,7 +794,6 @@ export default function OrdemServicoList({
         <div className="bg-neutral-100 border-4 border border-dashed border-black rounded-2xl p-12 text-center text-neutral-900 dark:text-neutral-100">
           <Clock className="w-12 h-12 mx-auto text-neutral-900 dark:text-neutral-100 stroke-[2.5] mb-3" />
           <p className="font-black text-lg uppercase tracking-wider mb-1">Sem Ordens de Serviço</p>
-          <p className="text-xs font-bold text-neutral-600 uppercase tracking-tight">Tente ajustar seus termos de pesquisa ou filtros.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
