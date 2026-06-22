@@ -22,6 +22,7 @@ export const PRECONFIG_COMPANIES: AssistenciaTecnica[] = [
     cnpj: '12.345.678/0001-90',
     zipCode: '01311-200',
     logoUrl: '',
+    whatsapp: '(11) 98888-7777',
     expiresAt: '2027-12-31T23:59:59.000Z',
     active: true
   }

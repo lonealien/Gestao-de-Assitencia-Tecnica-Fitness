@@ -77,8 +77,8 @@ export function loadAssistencias(): AssistenciaTecnica[] {
 
   // Merge with PRECONFIG_COMPANIES
   const companyMap = new Map<string, AssistenciaTecnica>();
-  loadedList.forEach(c => companyMap.set(c.id, c));
   PRECONFIG_COMPANIES.forEach(c => companyMap.set(c.id, c));
+  loadedList.forEach(c => companyMap.set(c.id, c));
 
   const finalAssistencias = Array.from(companyMap.values());
   localStorage.setItem('assistencias_fitness_v2', JSON.stringify(finalAssistencias));

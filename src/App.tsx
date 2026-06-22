@@ -264,7 +264,8 @@ export default function App() {
     phone: currentAssistencia.phone || storeSettings.phone,
     city: currentAssistencia.city || storeSettings.city,
     state: currentAssistencia.state || storeSettings.state,
-    email: currentAssistencia.email || storeSettings.email
+    email: currentAssistencia.email || storeSettings.email,
+    whatsapp: currentAssistencia.whatsapp || storeSettings.whatsapp
   } : storeSettings;
 
   // -- Event Handlers --
