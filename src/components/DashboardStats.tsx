@@ -43,16 +43,16 @@ export default function DashboardStats({
 
   const total = ordens.length;
   const pendente = ordens.filter(o => o.status === 'Pendente').length;
-  const emExecucao = ordens.filter(o => o.status === 'Em Conserto' || o.status === 'Em Execução' || o.status === 'Em Análise').length;
-  const aguardandoPecas = ordens.filter(o => o.status === 'Aguardando Peças').length;
-  const concluida = ordens.filter(o => o.status === 'Concluída').length;
+  const emExecucaoCount = 0; // These statuses no longer exist in types
+  const aguardandoPecas = ordens.filter(o => o.status === 'Aguardando Peça').length;
+  const concluida = ordens.filter(o => o.status === 'Finalizada').length;
 
   const totalRevenue = ordens
-    .filter(o => o.status === 'Concluída')
+    .filter(o => o.status === 'Finalizada')
     .reduce((acc, current) => acc + current.totalCostValue, 0);
 
   const pendingRevenue = ordens
-    .filter(o => o.status !== 'Concluída' && o.status !== 'Cancelada')
+    .filter(o => o.status !== 'Finalizada' && o.status !== 'Cancelada')
     .reduce((acc, current) => acc + current.totalCostValue, 0);
 
   // Date matchers using local time comparison
@@ -87,11 +87,10 @@ export default function DashboardStats({
   };
 
   // Filter active and incomplete ordens
-  const activeOrdens = ordens.filter(o => o.status !== 'Concluída' && o.status !== 'Cancelada');
+  const activeOrdens = ordens.filter(o => o.status !== 'Finalizada' && o.status !== 'Cancelada');
 
   // Today scheduled/created orders (Including all statuses as requested - "independente do status")
   const ordensDoDia = ordens.filter(o => {
-    if (o.status === 'Cancelada') return false; 
     const isTargetToday = isTodayMatch(o.scheduledVisitDate);
     const isCreatedToday = isTodayMatch(o.createdAt);
     // Also check delivery target if technician set it to today
@@ -101,7 +100,6 @@ export default function DashboardStats({
 
   // Week scheduled/created orders
   const ordensDaSemana = ordens.filter(o => {
-    if (o.status === 'Cancelada') return false;
     const isTargetWeek = isWeekMatch(o.scheduledVisitDate);
     const isCreatedWeek = isWeekMatch(o.createdAt);
     return isTargetWeek || isCreatedWeek;
@@ -109,7 +107,6 @@ export default function DashboardStats({
 
   // Month scheduled/created orders
   const ordensDoMes = ordens.filter(o => {
-    if (o.status === 'Cancelada') return false;
     const isTargetMonth = isMonthMatch(o.scheduledVisitDate);
     const isCreatedMonth = isMonthMatch(o.createdAt);
     return isTargetMonth || isCreatedMonth;
@@ -142,9 +139,9 @@ export default function DashboardStats({
   } else if (listFilter === 'pendentes') {
     displayedOrdens = ordens.filter(o => o.status === 'Pendente');
   } else if (listFilter === 'conserto') {
-    displayedOrdens = ordens.filter(o => o.status === 'Em Conserto' || o.status === 'Em Execução' || o.status === 'Em Análise' || o.status === 'Aguardando Peças');
+    displayedOrdens = ordens.filter(o => o.status === 'Aguardando Peça');
   } else if (listFilter === 'finalizadas') {
-    displayedOrdens = ordens.filter(o => o.status === 'Concluída');
+    displayedOrdens = ordens.filter(o => o.status === 'Finalizada');
   } else {
     displayedOrdens = activeOrdens;
   }
@@ -244,9 +241,9 @@ export default function DashboardStats({
             </span>
           </div>
           <div className="mt-2">
-            <span className="text-3xl font-black font-mono tracking-tighter text-neutral-900 dark:text-neutral-100 block leading-none">{emExecucao + aguardandoPecas}</span>
+            <span className="text-3xl font-black font-mono tracking-tighter text-neutral-900 dark:text-neutral-100 block leading-none">{emExecucaoCount + aguardandoPecas}</span>
             <span className="text-[10px] uppercase font-bold text-blue-900 dark:text-blue-300 tracking-wide mt-1 block">
-              {emExecucao} Ativas • {aguardandoPecas} Peças
+              {emExecucaoCount} Ativas • {aguardandoPecas} Peças
             </span>
           </div>
         </button>
@@ -384,7 +381,7 @@ export default function DashboardStats({
                   : 'bg-white dark:bg-neutral-800 hover:bg-neutral-50 text-neutral-900 dark:text-neutral-100'
               }`}
             >
-              Em Conserto ({emExecucao + aguardandoPecas})
+              Aguardando Peça ({aguardandoPecas})
             </button>
             <button
               onClick={() => setListFilter('finalizadas')}
@@ -463,9 +460,8 @@ export default function DashboardStats({
 
               // Status styling
               const statusColors = o.status === 'Pendente' ? 'bg-yellow-300 dark:bg-yellow-400 text-neutral-900'
-                : o.status === 'Em Execução' ? 'bg-blue-400 text-white dark:text-neutral-900'
-                : o.status === 'Aguardando Peças' ? 'bg-purple-100 text-purple-900 border-purple-300'
-                : o.status === 'Em Análise' ? 'bg-cyan-100 text-cyan-900'
+                : o.status === 'Aguardando Peça' ? 'bg-purple-100 text-purple-900 border-purple-300'
+                : o.status === 'Finalizada' ? 'bg-emerald-400 text-white dark:text-neutral-900'
                 : 'bg-neutral-200 text-neutral-900 dark:text-neutral-100';
 
               const isPrevistoHoje = isTodayMatch(o.deliveryTargetDate);

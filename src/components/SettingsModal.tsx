@@ -26,6 +26,7 @@ export default function SettingsModal({ currentSettings, onSave, onClose, isGlob
   const [address, setAddress] = useState(currentSettings.address || '');
   const [zipCode, setZipCode] = useState(currentSettings.zipCode || '');
   const [phone, setPhone] = useState(currentSettings.phone || '');
+  const [whatsapp, setWhatsapp] = useState(currentSettings.whatsapp || '');
   const [city, setCity] = useState(currentSettings.city || '');
   const [state, setState] = useState(currentSettings.state || '');
   const [email, setEmail] = useState(currentSettings.email || '');
@@ -86,7 +87,7 @@ export default function SettingsModal({ currentSettings, onSave, onClose, isGlob
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ name, logoUrl, cnpj, address, zipCode, phone, city, state, email });
+    onSave({ name, logoUrl, cnpj, address, zipCode, phone, whatsapp, city, state, email });
     onClose();
   };
 
@@ -276,6 +277,19 @@ export default function SettingsModal({ currentSettings, onSave, onClose, isGlob
                 value={phone}
                 onChange={e => setPhone(maskPhone(e.target.value))}
                 className="w-full bg-neutral-100 dark:bg-neutral-200 border border-neutral-200 dark:border-neutral-500 px-4 py-2 text-sm font-bold text-neutral-900 dark:text-neutral-800 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-yellow-300 transition-all rounded-2xl"
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-black uppercase text-neutral-800 dark:text-neutral-200 mb-2 flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                 WhatsApp da Empresa
+              </label>
+              <input
+                type="text"
+                value={whatsapp}
+                onChange={e => setWhatsapp(maskPhone(e.target.value))}
+                className="w-full bg-neutral-100 dark:bg-neutral-200 border border-neutral-200 dark:border-neutral-500 px-4 py-2 text-sm font-bold text-neutral-900 dark:text-neutral-800 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all rounded-2xl"
                 placeholder="(00) 00000-0000"
               />
             </div>

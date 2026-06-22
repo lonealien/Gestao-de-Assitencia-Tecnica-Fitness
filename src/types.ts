@@ -2,6 +2,7 @@ export interface AssistenciaTecnica {
   id: string;
   name: string;
   phone: string;
+  whatsapp?: string;
   email: string;
   address: string;
   specialties?: string[];
@@ -26,11 +27,8 @@ export interface Tecnico {
 
 export type OSStatus = 
   | 'Pendente' 
-  | 'Em Análise' 
-  | 'Aguardando Peças' 
-  | 'Em Conserto' 
-  | 'Em Execução' 
-  | 'Concluída' 
+  | 'Aguardando Peça' 
+  | 'Finalizada' 
   | 'Cancelada';
 
 export type OSPriority = 'Baixa' | 'Média' | 'Alta';
@@ -96,6 +94,7 @@ export interface StoreSettings {
   address?: string;
   zipCode?: string;
   phone?: string;
+  whatsapp?: string;
   city?: string;
   state?: string;
   email?: string;

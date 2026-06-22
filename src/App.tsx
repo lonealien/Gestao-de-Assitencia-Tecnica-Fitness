@@ -641,10 +641,21 @@ export default function App() {
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
-                    <h3 className="text-2xl font-black uppercase tracking-tight text-neutral-900 dark:text-neutral-100">Ordens de Serviço de Aparelhos</h3>
-                    <p className="text-xs font-bold text-neutral-500 uppercase tracking-wide mt-1">
-                      Gerencie ordens de esteiras, bicicletas, elípticos e estações de musculação.
-                    </p>
+                    {activeStoreSettings.whatsapp ? (
+                      <a
+                        href={`https://wa.me/${activeStoreSettings.whatsapp.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black uppercase tracking-widest px-4 py-2.5 rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 w-fit border-2 border-emerald-600 shadow-[2px_2px_0px_0px_rgba(5,150,105,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+                      >
+                        <MessageCircle className="w-4 h-4 fill-white" />
+                        Falar com a Empresa
+                      </a>
+                    ) : (
+                      <div className="bg-neutral-100 dark:bg-neutral-800 text-neutral-400 text-[10px] font-bold uppercase tracking-widest px-4 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl italic">
+                        WhatsApp não configurado
+                      </div>
+                    )}
                   </div>
                   {(loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE' || loggedUser.role === 'ATENDENTE') && (
                     <button
@@ -749,14 +760,14 @@ export default function App() {
             <div className="flex items-center gap-2">
               <span className="font-black text-neutral-900 dark:text-neutral-100 tracking-tight text-sm uppercase">{activeStoreSettings.name}</span>
               <span className="text-neutral-300 dark:text-neutral-600">•</span>
-              <span className="font-bold font-mono">SISTEMA v2.0</span>
+              <span className="font-bold font-mono">SISTEMA v2.0 ( BETA )</span>
             </div>
             {loggedUser?.assistenciaId && (
               <span className="text-[9px] font-mono font-bold text-neutral-400">ID DA REDE INTERNA: {loggedUser.assistenciaId}</span>
             )}
           </div>
           <div className="flex space-x-6 font-black tracking-widest">
-            <span className="font-mono tracking-tight text-[10px] bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-0.5">by; LonneTech</span>
+            <span className="font-mono tracking-tight text-[10px] bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-0.5">BY: LONE TECH</span>
           </div>
         </div>
       </footer>

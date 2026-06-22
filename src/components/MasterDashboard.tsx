@@ -66,6 +66,7 @@ export default function MasterDashboard({
   const [astName, setAstName] = useState('');
   const [astCNPJ, setAstCNPJ] = useState('');
   const [astPhone, setAstPhone] = useState('');
+  const [astWhatsapp, setAstWhatsapp] = useState('');
   const [astEmail, setAstEmail] = useState('');
   const [astAddress, setAstAddress] = useState('');
   const [astCity, setAstCity] = useState('');
@@ -179,6 +180,7 @@ export default function MasterDashboard({
       id: newAstId,
       name: astName.trim(),
       phone: astPhone.trim() || '(00) 00000-0000',
+      whatsapp: astWhatsapp.trim(),
       email: astEmail.trim() || `${emailLower}`,
       address: astAddress.trim() || 'Sem Endereço cadastrado',
       city: astCity.trim(),
@@ -209,6 +211,7 @@ export default function MasterDashboard({
     setAstName('');
     setAstCNPJ('');
     setAstPhone('');
+    setAstWhatsapp('');
     setAstEmail('');
     setAstAddress('');
     setAstCity('');
@@ -708,6 +711,14 @@ export default function MasterDashboard({
                     />
                   </div>
                   <div>
+                    <label className="block text-[10px] font-black uppercase mb-1 text-emerald-500">WhatsApp da Empresa</label>
+                    <input 
+                      type="text" value={astWhatsapp} onChange={e => setAstWhatsapp(maskPhone(e.target.value))}
+                      placeholder="Ex: (21) 99999-9999"
+                      className="w-full bg-white dark:bg-neutral-950 border border-emerald-200 p-2.5 text-xs font-bold rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-[10px] font-black uppercase mb-1">E-mail</label>
                     <input 
                       type="email" value={astEmail} onChange={e => setAstEmail(e.target.value)}
@@ -826,13 +837,14 @@ export default function MasterDashboard({
                               <p>📮 <strong>CEP:</strong> {ast.zipCode || '—'}</p>
                               <p>✉️ <strong>Email:</strong> {ast.email || '—'}</p>
                               <p>📞 <strong>Telefone:</strong> {ast.phone || '—'}</p>
-                              {ast.phone && (
+                              {ast.whatsapp && <p>📱 <strong>WhatsApp:</strong> {ast.whatsapp}</p>}
+                              {(ast.whatsapp || ast.phone) && (
                                 <p className="pt-2">
                                   <a 
-                                    href={`https://wa.me/55${ast.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, falando aqui da administração do sistema.`)}`} 
+                                    href={`https://wa.me/55${(ast.whatsapp || ast.phone).replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, falando aqui da administração do sistema.`)}`} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="bg-[#25D366] hover:bg-[#1DA851] text-white font-black text-[10px] px-3 py-1.5 rounded-lg inline-flex items-center gap-2 uppercase tracking-wide cursor-pointer transition-colors"
+                                    className="bg-[#25D366] hover:bg-[#1DA851] text-white font-black text-[10px] px-3 py-1.5 rounded-lg inline-flex items-center gap-2 uppercase tracking-wide cursor-pointer transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                                   >
                                     <MessageCircle className="w-3.5 h-3.5" /> Falar no WhatsApp
                                   </a>

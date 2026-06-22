@@ -136,7 +136,7 @@ export default function OrdemServicoList({
       const os = ordens.find(o => o.id === initialSelectedOSId);
       if (os) {
         if (currentRole === 'TECNICO' && os.status === 'Pendente') {
-          setNewStatus('Em Conserto');
+          setNewStatus('Pendente');
         } else {
           setNewStatus(os.status);
         }
@@ -201,7 +201,7 @@ export default function OrdemServicoList({
   } else if (currentRole === 'TECNICO' && activeRoleEntityId) {
     scopedOrdens = ordens.filter(o => 
       o.tecnicoId === activeRoleEntityId && 
-      o.status !== 'Concluída'
+      o.status !== 'Finalizada'
     );
   }
 
@@ -232,11 +232,10 @@ export default function OrdemServicoList({
   const getStatusColor = (status: OSStatus) => {
     switch (status) {
       case 'Pendente': return 'bg-neutral-100 text-neutral-900 dark:text-neutral-100 border-black';
-      case 'Em Análise': return 'bg-sky-200 text-neutral-900 dark:text-neutral-100 border-black';
-      case 'Aguardando Peças': return 'bg-amber-300 dark:bg-amber-400 text-neutral-900 border-black';
-      case 'Em Conserto': return 'bg-purple-300 text-neutral-900 dark:text-neutral-100 border-black';
-      case 'Concluída': return 'bg-emerald-300 dark:bg-emerald-400 text-neutral-900 border-black';
+      case 'Aguardando Peça': return 'bg-amber-300 dark:bg-amber-400 text-neutral-900 border-black';
+      case 'Finalizada': return 'bg-emerald-300 dark:bg-emerald-400 text-neutral-900 border-black';
       case 'Cancelada': return 'bg-rose-400 text-neutral-900 dark:text-neutral-100 border-black';
+      default: return 'bg-neutral-100 text-neutral-900';
     }
   };
 
@@ -275,10 +274,10 @@ export default function OrdemServicoList({
       JSON.stringify(editFotosAntes) !== JSON.stringify(os.fotosAntes || []) ||
       JSON.stringify(editFotosDepois) !== JSON.stringify(os.fotosDepois || []);
 
-    // Determine target/applied status. If completion date is present, force Status to 'Concluída'.
+    // Determine target/applied status. If completion date is present, force Status to 'Finalizada'.
     let appliedStatus = newStatus || os.status;
     if (editCompletionDate && editCompletionDate.trim() !== '') {
-      appliedStatus = 'Concluída';
+      appliedStatus = 'Finalizada';
     }
 
     const hasStatusChanged = appliedStatus !== os.status;
@@ -743,11 +742,9 @@ export default function OrdemServicoList({
                 className="w-full py-2.5 px-3 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 text-sm font-bold focus:outline-none"
               >
                 <option value="Todos">Todos os Status</option>
-                <option value="Pendente">Pendentes</option>
-                <option value="Em Análise">Em Análise</option>
-                <option value="Aguardando Peças">Aguardando Peças</option>
-                <option value="Em Conserto">Em Conserto</option>
-                <option value="Concluída">Concluídas (Finalizado)</option>
+                <option value="Pendente">Abertas (Pendentes)</option>
+                <option value="Aguardando Peça">Aguardando Peça</option>
+                <option value="Finalizada">Finalizadas</option>
                 <option value="Cancelada">Canceladas</option>
               </select>
             </div>
@@ -974,11 +971,11 @@ export default function OrdemServicoList({
                            <span className="text-[9px] text-neutral-400 block uppercase font-black tracking-widest">Mecânico Escalado</span>
                            
                            {quickAssignOSId === os.id ? (
-                             <div className="flex items-center gap-2 mt-1">
+                             <div className="flex items-center gap-2 mt-1 bg-white dark:bg-neutral-800 p-2 rounded-xl border-2 border-black shadow-sm">
                                <select
                                  value={quickTecId}
                                  onChange={(e) => setQuickTecId(e.target.value)}
-                                 className="text-xs font-bold border border-neutral-300 dark:border-neutral-600 rounded bg-white dark:bg-neutral-800 px-2 py-1 outline-none"
+                                 className="text-xs font-bold border border-neutral-300 dark:border-neutral-600 rounded bg-white dark:bg-neutral-800 px-2 py-1 outline-none min-w-[120px]"
                                >
                                  <option value="">Escolher Técnico</option>
                                  {usuarios
@@ -989,7 +986,7 @@ export default function OrdemServicoList({
                                </select>
                                <button
                                  onClick={() => handleQuickAssign(os, quickTecId)}
-                                 className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wider cursor-pointer"
+                                 className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider cursor-pointer hover:bg-neutral-800 transition-colors"
                                >
                                  Salvar
                                </button>
@@ -998,15 +995,25 @@ export default function OrdemServicoList({
                                    setQuickAssignOSId(null);
                                    setQuickTecId('');
                                  }}
-                                 className="text-[10px] font-black uppercase tracking-wider text-neutral-400 hover:text-neutral-600 cursor-pointer"
+                                 className="text-[10px] font-black uppercase tracking-wider text-neutral-500 hover:text-rose-500 cursor-pointer p-1"
                                >
-                                 Sair
+                                 <X className="w-4 h-4" />
                                </button>
                              </div>
                            ) : (
-                             <div className="flex items-center gap-3">
-                               <span className={`text-xs font-black block truncate mt-0.5 uppercase tracking-tight ${correspondingTec ? 'text-neutral-900 dark:text-neutral-100' : 'text-amber-500 italic'}`}>
-                                 {correspondingTec ? correspondingTec.name : 'Pendente de Escala'}
+                             <div className="flex flex-wrap items-center gap-3 mt-1">
+                               <span className={`text-sm font-black block truncate uppercase tracking-tight flex items-center gap-1.5 ${correspondingTec ? 'text-neutral-900 dark:text-neutral-100' : 'text-amber-600 italic bg-amber-50 px-2 py-0.5 rounded border border-amber-200'}`}>
+                                 {correspondingTec ? (
+                                   <>
+                                     <User className="w-3.5 h-3.5 text-neutral-500" />
+                                     {correspondingTec.name}
+                                   </>
+                                 ) : (
+                                   <>
+                                     <AlertTriangle className="w-3.5 h-3.5" />
+                                     Aguardando Mecânico
+                                   </>
+                                 )}
                                </span>
                                
                                {(currentRole === 'ADMIN' || currentRole === 'ASSISTENCIA_GERENTE' || currentRole === 'ATENDENTE' || currentRole === 'MASTER') && (
@@ -1019,9 +1026,10 @@ export default function OrdemServicoList({
                                       setQuickAssignOSId(os.id);
                                       setQuickTecId(os.tecnicoId || '');
                                     }}
-                                    className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-neutral-200 dark:border-neutral-700 transition-all cursor-pointer ${isReadOnly ? 'opacity-50 grayscale cursor-not-allowed' : 'bg-white dark:bg-neutral-800 hover:bg-neutral-900 hover:text-white dark:hover:bg-neutral-100 dark:hover:text-neutral-900'}`}
+                                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all cursor-pointer flex items-center gap-1.5 ${isReadOnly ? 'opacity-50 blur-[0.5px] grayscale cursor-not-allowed border-neutral-300' : 'bg-white dark:bg-neutral-800 border-black hover:bg-yellow-300 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'}`}
                                   >
-                                    Escalar Técnico
+                                    <Hammer className="w-3.5 h-3.5" />
+                                    {correspondingTec ? 'Re-Escalar' : 'Escalar Técnico'}
                                   </button>
                                )}
                              </div>
@@ -1106,7 +1114,7 @@ export default function OrdemServicoList({
                             }
                             setSelectedOSId(os.id);
                             if (currentRole === 'TECNICO' && os.status === 'Pendente') {
-                              setNewStatus('Em Conserto');
+                              setNewStatus('Pendente');
                             } else {
                               setNewStatus(os.status);
                             }
@@ -1222,12 +1230,10 @@ export default function OrdemServicoList({
                                   onChange={(e) => setNewStatus(e.target.value as OSStatus)}
                                   className="w-full border border-neutral-200 dark:border-neutral-700 rounded-2xl p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 focus:outline-none"
                                 >
-                                  <option value="Pendente">Pendente (Importação / Criação)</option>
-                                  <option value="Em Análise">Em Análise / Orçamentista</option>
-                                  <option value="Aguardando Peças">Aguardando Peças Importadas/Locais</option>
-                                  <option value="Em Conserto">Em Conserto (Serviço em curso)</option>
-                                  <option value="Concluída">Serviço Concluído & Liberado</option>
-                                  <option value="Cancelada">Cancelada Administrativamente</option>
+                                  <option value="Pendente">Pendente</option>
+                                  <option value="Aguardando Peça">Aguardando Peça</option>
+                                  <option value="Finalizada">Finalizada (Encerrar OS)</option>
+                                  <option value="Cancelada">Cancelada</option>
                                 </select>
                               </div>
                             ) : (
