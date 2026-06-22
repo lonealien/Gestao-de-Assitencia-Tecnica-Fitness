@@ -36,6 +36,7 @@ export const MANUAL_USERS: AppUser[] = [
     username: 'clemente',
     email: 'clementebsf@gmail.com',
     password: 'clementebsf', 
-    role: 'MASTER'
+    role: 'MASTER',
+    phone: '5511999999999'
   }
 ];
