@@ -1129,7 +1129,7 @@ export default function OrdemServicoList({
                         {isHistoryExpanded ? 'Fechar Log' : 'Linha Tempo'}
                       </button>
 
-                      {(currentRole === 'ADMIN' || currentRole === 'ASSISTENCIA_GERENTE' || currentRole === 'MASTER') && (
+                      {(currentRole === 'ADMIN' || currentRole === 'ASSISTENCIA_GERENTE' || currentRole === 'ATENDENTE' || currentRole === 'MASTER') && (
                         <button
                           onClick={() => setOsToExport(os)}
                           className="bg-amber-300 hover:bg-amber-400 text-neutral-900 dark:text-neutral-100 px-3.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-xs font-black uppercase tracking-wider transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm dark:shadow-none hover:shadow-md"
