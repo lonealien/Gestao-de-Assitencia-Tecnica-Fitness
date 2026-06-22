@@ -14,6 +14,7 @@ interface UserManagementProps {
   onAddTecnicoAndUser?: (newTecnico: Tecnico, userLogin: string, userPass: string) => void;
   onUpdateUser?: (user: AppUser) => void;
   storeSettings?: StoreSettings;
+  onShowBlockedAlert?: (message: string) => void;
 }
 
 export default function UserManagement({
@@ -26,7 +27,8 @@ export default function UserManagement({
   onToggleUserActive,
   onAddTecnicoAndUser,
   onUpdateUser,
-  storeSettings
+  storeSettings,
+  onShowBlockedAlert
 }: UserManagementProps) {
   const [activeForm, setActiveForm] = useState<boolean>(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -259,7 +261,7 @@ export default function UserManagement({
           <button
             onClick={() => {
               if (currentUser.isReadOnly) {
-                alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
                 return;
               }
               setActiveForm(!activeForm);
@@ -685,7 +687,7 @@ export default function UserManagement({
                                   type="button"
                                   onClick={() => {
                                     if (currentUser.isReadOnly) {
-                                      alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
                                       return;
                                     }
                                     setEditingUserId(u.id);
@@ -710,7 +712,7 @@ export default function UserManagement({
                                   type="button"
                                   onClick={() => {
                                     if (currentUser.isReadOnly) {
-                                      alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
                                       return;
                                     }
                                     setEditingUserId(u.id);
@@ -735,7 +737,7 @@ export default function UserManagement({
                                 type="button"
                                 onClick={() => {
                                   if (currentUser.isReadOnly) {
-                                    alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                    onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
                                     return;
                                   }
                                   onToggleUserActive(u.id);
@@ -751,7 +753,7 @@ export default function UserManagement({
                                   type="button"
                                   onClick={() => {
                                     if (currentUser.isReadOnly) {
-                                      alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
                                       return;
                                     }
                                     setDeleteConfirm({

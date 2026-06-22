@@ -12,6 +12,7 @@ interface DashboardStatsProps {
   currentRole: UserRole;
   isReadOnly?: boolean;
   onEditOS?: (id: string) => void;
+  onShowBlockedAlert?: (message: string) => void;
 }
 
 export default function DashboardStats({
@@ -19,7 +20,8 @@ export default function DashboardStats({
   onOpenNewOSForm,
   currentRole,
   isReadOnly,
-  onEditOS
+  onEditOS,
+  onShowBlockedAlert
 }: DashboardStatsProps) {
   const [listFilter, setListFilter] = useState<'dia' | 'semana' | 'mes' | 'todos' | 'por-data' | 'historico' | 'pendentes' | 'conserto' | 'finalizadas'>('dia');
   const [customSearchStartDate, setCustomSearchStartDate] = useState<string>('2026-06-01');
@@ -156,20 +158,21 @@ export default function DashboardStats({
           </p>
         </div>
 
-        {(currentRole === 'ADMIN' || currentRole === 'ASSISTENCIA_GERENTE' || currentRole === 'ATENDENTE') && !isReadOnly ? (
+        {(currentRole === 'ADMIN' || currentRole === 'ASSISTENCIA_GERENTE' || currentRole === 'ATENDENTE') ? (
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <button
-              onClick={onOpenNewOSForm}
+              onClick={() => {
+                if (isReadOnly) {
+                  onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura.");
+                  return;
+                }
+                onOpenNewOSForm();
+              }}
               className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 text-white dark:text-neutral-900 font-black uppercase tracking-wider px-5 py-2.5 rounded-2xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-sm dark:shadow-none"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               Abrir OS
             </button>
-          </div>
-        ) : isReadOnly ? (
-          <div className="bg-amber-100 dark:bg-amber-900/50 text-amber-900 border-2 border-amber-400 p-2.5 flex items-center gap-2 text-xs font-black uppercase rounded-2xl shrink-0">
-            <Lock className="w-4 h-4 text-amber-700" />
-            Modo Somente Leitura Ativo
           </div>
         ) : null}
       </div>
@@ -519,16 +522,22 @@ export default function DashboardStats({
                         <Eye className="w-3.5 h-3.5" />
                         Visualizar Ficha
                       </button>
-                      {onEditOS && (!isReadOnly || currentRole === 'ADMIN') && (
+                      {onEditOS ? (
                         <button
-                          onClick={() => onEditOS(o.id)}
+                          onClick={() => {
+                            if (isReadOnly && currentRole !== 'ADMIN') {
+                              onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura.");
+                              return;
+                            }
+                            onEditOS(o.id);
+                          }}
                           className="bg-yellow-300 hover:bg-yellow-400 text-neutral-900 dark:text-neutral-100 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 flex items-center gap-1 cursor-pointer transition-all active:translate-x-0.5"
                           title="Editar OS Diretamente"
                         >
                           <Hammer className="w-3.5 h-3.5" />
                           Editar
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>

@@ -18,6 +18,7 @@ import LoginScreen from './components/LoginScreen';
 import UserManagement from './components/UserManagement';
 import SettingsModal from './components/SettingsModal';
 import MasterDashboard from './components/MasterDashboard';
+import BlockedAccessModal from './components/BlockedAccessModal';
 
 import { 
   Building2, ClipboardList, LayoutDashboard, Dumbbell, 
@@ -39,6 +40,7 @@ export default function App() {
   const [loggedUser, setLoggedUser] = useState<AppUser | null>(null);
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({ name: 'ASSISTÊNCIA' });
   const [initialSelectedOSId, setInitialSelectedOSId] = useState<string | null>(null);
+  const [blockedModalMessage, setBlockedModalMessage] = useState<string | null>(null);
 
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -671,6 +673,7 @@ export default function App() {
                   setInitialSelectedOSId(id);
                   setActiveTab('ordens');
                 }}
+                onShowBlockedAlert={(msg) => setBlockedModalMessage(msg)}
               />
             )}
 
@@ -687,7 +690,7 @@ export default function App() {
                     <button
                       onClick={() => {
                         if (loggedUser.isReadOnly || isExpired) {
-                          alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                          setBlockedModalMessage("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
                           return;
                         }
                         setShowAddOSForm(true);
@@ -713,6 +716,7 @@ export default function App() {
                   isReadOnly={loggedUser.isReadOnly || isExpired}
                   initialSelectedOSId={initialSelectedOSId}
                   onClearInitialSelectedOSId={() => setInitialSelectedOSId(null)}
+                  onShowBlockedAlert={(msg) => setBlockedModalMessage(msg)}
                 />
               </div>
             )}
@@ -724,6 +728,7 @@ export default function App() {
                 tecnicos={tenantTecnicos}
                 currentUser={{ ...loggedUser, isReadOnly: loggedUser.isReadOnly || isExpired }}
                 storeSettings={activeStoreSettings}
+                onShowBlockedAlert={(msg) => setBlockedModalMessage(msg)}
                 onAddUser={(newUsr) => {
                   const usrWithTenant = {
                     ...newUsr,
@@ -815,6 +820,12 @@ export default function App() {
             }
           }} 
           onClose={() => setShowSettings(false)} 
+        />
+      )}
+      {blockedModalMessage && (
+        <BlockedAccessModal 
+          message={blockedModalMessage} 
+          onClose={() => setBlockedModalMessage(null)} 
         />
       )}
 

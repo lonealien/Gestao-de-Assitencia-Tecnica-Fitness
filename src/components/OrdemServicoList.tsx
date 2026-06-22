@@ -22,6 +22,7 @@ interface OrdemServicoListProps {
   isReadOnly?: boolean;
   initialSelectedOSId?: string | null;
   onClearInitialSelectedOSId?: () => void;
+  onShowBlockedAlert?: (message: string) => void;
 }
 
 const compressImage = (file: File, maxWidth = 800): Promise<string> => {
@@ -63,7 +64,8 @@ export default function OrdemServicoList({
   onDeleteOS,
   isReadOnly,
   initialSelectedOSId,
-  onClearInitialSelectedOSId
+  onClearInitialSelectedOSId,
+  onShowBlockedAlert
 }: OrdemServicoListProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('Todos');
@@ -238,7 +240,7 @@ export default function OrdemServicoList({
 
   const handleApplyUpdate = (os: OrdemServico) => {
     if (isReadOnly) {
-      alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
       return;
     }
     const hasVisitDateChanged = editScheduledVisitDate !== (os.scheduledVisitDate || '');
@@ -1007,7 +1009,7 @@ export default function OrdemServicoList({
                         <button
                           onClick={() => {
                             if (isReadOnly) {
-                              alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                              onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
                               return;
                             }
                             setSelectedOSId(os.id);
@@ -1049,7 +1051,7 @@ export default function OrdemServicoList({
                         <button
                           onClick={() => {
                             if (isReadOnly) {
-                              alert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                              onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
                               return;
                             }
                             setDeleteConfirm({
