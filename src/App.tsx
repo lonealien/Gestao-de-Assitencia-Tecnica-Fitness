@@ -126,71 +126,14 @@ export default function App() {
     // Initial load check for migration - collection by collection & syncing preconfigured files
     const checkMigration = async () => {
       try {
-        // A. Run one-time legacy mock cleanup/purge if not already completed (check Firestore global flag)
-        const migrationDocRef = doc(db, 'system', 'migration_status');
-        const migrationDoc = await getDoc(migrationDocRef);
-        const alreadyPurged = migrationDoc.exists() && migrationDoc.data().has_purged_v3 === true;
-
-        if (!alreadyPurged) {
-          console.log('Running one-time legacy mock cleanup (Global)...');
-          // Fetch and delete all orders
-          const ordensSnap = await getDocs(collection(db, 'ordens'));
-          for (const doc of ordensSnap.docs) {
-            await deleteFromFirestore('ordens', doc.id);
-          }
-
-          // Fetch and delete all technicians
-          const tecSnap = await getDocs(collection(db, 'tecnicos'));
-          for (const doc of tecSnap.docs) {
-            await deleteFromFirestore('tecnicos', doc.id);
-          }
-
-          // Fetch and delete all assistencias (except preconfigured ones)
-          const astSnap2 = await getDocs(collection(db, 'assistencias'));
-          const preconfigIds = new Set(PRECONFIG_COMPANIES.map(c => c.id));
-          for (const doc of astSnap2.docs) {
-            if (!preconfigIds.has(doc.id)) {
-              await deleteFromFirestore('assistencias', doc.id);
-            }
-          }
-
-          // Fetch and delete all users (except master and preconfigured ones)
-          const userSnap2 = await getDocs(collection(db, 'usuarios'));
-          const allowedUserIds = new Set([
-            'usr-master', 
-            'usr-master-clemente',
-            ...PRECONFIG_COMPANY_USERS.map(u => u.id)
-          ]);
-          for (const doc of userSnap2.docs) {
-            const userData = doc.data();
-            if (!allowedUserIds.has(doc.id) && userData.username !== 'admin' && userData.username !== 'clemente') {
-              await deleteFromFirestore('usuarios', doc.id);
-            }
-          }
-
-          // Clear local cache to force fresh pull
-          localStorage.removeItem('assistencias_fitness_v2');
-          localStorage.removeItem('tecnicos_fitness_v2');
-          localStorage.removeItem('ordens_fitness_v2');
-          localStorage.removeItem('usuarios_fitness_v2');
-
-          await setDoc(migrationDocRef, { has_purged_v3: true, timestamp: new Date().toISOString() });
-          localStorage.setItem('has_purged_legacy_examples_v3', 'true');
-          console.log('Legacy mock data purge completed!');
-        }
-
-        // B. Ensure pre-configured companies and company users are pushed/synced to Firestore
-        for (const company of PRECONFIG_COMPANIES) {
-          await saveToFirestore('assistencias', company);
-        }
-        for (const companyUser of PRECONFIG_COMPANY_USERS) {
-          await saveToFirestore('usuarios', companyUser);
-        }
-
-        // C. Standard Seeding fallback if database is empty
+        // Seeding fallback if database is empty - collection by collection & syncing preconfigured files
         const userSnap = await getDocs(collection(db, 'usuarios'));
         if (userSnap.empty) {
           console.log('Seeding usuarios...');
+          // Push preconfigured company users first
+          for (const companyUser of PRECONFIG_COMPANY_USERS) {
+            await saveToFirestore('usuarios', companyUser);
+          }
           const localUsrs = loadUsers();
           localUsrs.forEach(u => saveToFirestore('usuarios', u));
         }
@@ -198,6 +141,10 @@ export default function App() {
         const astSnap = await getDocs(collection(db, 'assistencias'));
         if (astSnap.empty) {
           console.log('Seeding assistencias...');
+          // Push preconfigured companies first
+          for (const company of PRECONFIG_COMPANIES) {
+            await saveToFirestore('assistencias', company);
+          }
           const localAssis = loadAssistencias();
           localAssis.forEach(a => saveToFirestore('assistencias', a));
         }
@@ -654,7 +601,7 @@ export default function App() {
               <div>
                 <p className="text-sm font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-tight">AVISO DO SISTEMA: CADASTRO COM ACESSO SOMENTE LEITURA</p>
                 <p className="text-xs font-bold text-amber-950 mt-0.5">
-                  Sua conta ({loggedUser.name}) está configurada com acesso restrito (Atendente Somente Leitura). Você tem permissão para auditar ordens de serviço, técnicos, oficinas e cronogramas, mas sem permissão para editar informações.
+                  Sua conta ({loggedUser.name}) está configurada com acesso restrito. Você tem permissão para auditar ordens de serviço, técnicos, oficinas e cronogramas, mas sem permissão para editar informações.
                 </p>
               </div>
             </div>

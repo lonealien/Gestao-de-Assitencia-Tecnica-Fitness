@@ -97,7 +97,7 @@ export default function UserManagement({
       email: emailLower,
       password: editPassword.trim(),
       role: editRole,
-      isReadOnly: false,
+      isReadOnly: editIsReadOnly,
       phone: editPhone.trim(),
       assistenciaId: (editRole === 'TECNICO' || editRole === 'ATENDENTE' || editRole === 'ASSISTENCIA_GERENTE') ? (editAssistenciaId || u.assistenciaId || undefined) : undefined,
       tecnicoId: editRole === 'TECNICO' ? (editTecnicoId || u.tecnicoId || undefined) : undefined,
@@ -206,7 +206,7 @@ export default function UserManagement({
         role: selectedRole,
         assistenciaId: (selectedRole === 'TECNICO' || selectedRole === 'ATENDENTE' || selectedRole === 'ASSISTENCIA_GERENTE') ? (selectedAstId || currentUser.assistenciaId) : undefined,
         tecnicoId: selectedRole === 'TECNICO' ? (selectedTecId || newUserId) : undefined,
-        isReadOnly: false,
+        isReadOnly: isReadOnly,
         active: true
       };
 
@@ -377,18 +377,33 @@ export default function UserManagement({
             )}
 
             {/* Context links based on chosen role */}
-            <div>
-              <label htmlFor="link-tec-phone" className="block text-xs font-black uppercase tracking-wider text-neutral-500 mb-1">
-                Telefone / WhatsApp
-              </label>
-              <input
-                id="link-tec-phone"
-                type="text"
-                placeholder="(00) 00000-0000"
-                value={tecPhone}
-                onChange={(e) => setTecPhone(maskPhone(e.target.value))}
-                className="w-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none placeholder-neutral-500 dark:placeholder-neutral-400 dark:placeholder-neutral-500"
-              />
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <label htmlFor="link-tec-phone" className="block text-xs font-black uppercase tracking-wider text-neutral-500 mb-1">
+                  Telefone / WhatsApp
+                </label>
+                <input
+                  id="link-tec-phone"
+                  type="text"
+                  placeholder="(00) 00000-0000"
+                  value={tecPhone}
+                  onChange={(e) => setTecPhone(maskPhone(e.target.value))}
+                  className="w-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none placeholder-neutral-500 dark:placeholder-neutral-400 dark:placeholder-neutral-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-5">
+                <input
+                  id="user-readonly-checkbox"
+                  type="checkbox"
+                  checked={isReadOnly}
+                  onChange={(e) => setIsReadOnly(e.target.checked)}
+                  className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900"
+                />
+                <label htmlFor="user-readonly-checkbox" className="text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 cursor-pointer">
+                  Modo Somente Leitura
+                </label>
+              </div>
             </div>
           </div>
 
@@ -570,7 +585,16 @@ export default function UserManagement({
                             )}
                           </select>
                           
-                          {/* No longer restricted by read-only */}
+                          <div className="flex items-center gap-2 mt-2">
+                             <input
+                               id={`edit-readonly-${u.id}`}
+                               type="checkbox"
+                               checked={editIsReadOnly}
+                               onChange={(e) => setEditIsReadOnly(e.target.checked)}
+                               className="w-4 h-4 rounded border-neutral-300 text-neutral-900"
+                             />
+                             <label htmlFor={`edit-readonly-${u.id}`} className="text-[10px] font-black uppercase text-neutral-600 cursor-pointer">Somente Leitura</label>
+                          </div>
                         </div>
                       ) : (
                         <>

@@ -24,8 +24,21 @@ export default function DashboardStats({
   onShowBlockedAlert
 }: DashboardStatsProps) {
   const [listFilter, setListFilter] = useState<'dia' | 'semana' | 'mes' | 'todos' | 'por-data' | 'historico' | 'pendentes' | 'conserto' | 'finalizadas'>('dia');
-  const [customSearchStartDate, setCustomSearchStartDate] = useState<string>('2026-06-01');
-  const [customSearchEndDate, setCustomSearchEndDate] = useState<string>('2026-06-18');
+
+  // Helper to get YYYY-MM-DD in local time
+  const getLocalDateStr = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = getLocalDateStr(new Date());
+  // Default search range: current month
+  const firstDayOfMonth = todayStr.substring(0, 8) + '01';
+
+  const [customSearchStartDate, setCustomSearchStartDate] = useState<string>(firstDayOfMonth);
+  const [customSearchEndDate, setCustomSearchEndDate] = useState<string>(todayStr);
   const [selectedOS, setSelectedOS] = useState<OrdemServico | null>(null);
 
   const total = ordens.length;
@@ -42,68 +55,61 @@ export default function DashboardStats({
     .filter(o => o.status !== 'Concluída' && o.status !== 'Cancelada')
     .reduce((acc, current) => acc + current.totalCostValue, 0);
 
-  // Today Date calculation (simulated metadata today's date "2026-06-18" or local clock date)
-  const todayDate = new Date();
-  const todayStr = todayDate.toISOString().split('T')[0];
-
-  // Helpers matching simulated date of metadata or standard clock
+  // Date matchers using local time comparison
   const isTodayMatch = (dateStr?: string) => {
     if (!dateStr) return false;
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return false;
-    const cleanDate = d.toISOString().split('T')[0];
-    return cleanDate === '2026-06-18' || cleanDate === todayStr;
+    // Handle YYYY-MM-DD consistently avoiding problems with separators
+    const cleanDate = dateStr.substring(0, 10);
+    return cleanDate === todayStr;
   };
 
   const isWeekMatch = (dateStr?: string) => {
     if (!dateStr) return false;
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return false;
-    const cleanDate = d.toISOString().split('T')[0];
-    const isSimWeek = cleanDate >= '2026-06-14' && cleanDate <= '2026-06-20';
+    const cleanDate = dateStr.substring(0, 10);
     
-    // System current week calculation
     const curr = new Date();
-    const day = curr.getDay();
+    const day = curr.getDay(); // 0 is Sunday, 6 is Saturday
     const start = new Date(curr);
     start.setDate(curr.getDate() - day);
     const end = new Date(curr);
     end.setDate(curr.getDate() + (6 - day));
-    const fmt = (d: Date) => d.toISOString().split('T')[0];
-    const isSysWeek = cleanDate >= fmt(start) && cleanDate <= fmt(end);
     
-    return isSimWeek || isSysWeek;
+    const startStr = getLocalDateStr(start);
+    const endStr = getLocalDateStr(end);
+    
+    return cleanDate >= startStr && cleanDate <= endStr;
   };
 
   const isMonthMatch = (dateStr?: string) => {
     if (!dateStr) return false;
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return false;
-    const cleanDate = d.toISOString().split('T')[0];
-    const isSimMonth = cleanDate.startsWith('2026-06');
-    const isSysMonth = cleanDate.startsWith(todayStr.slice(0, 7));
-    return isSimMonth || isSysMonth;
+    const cleanDate = dateStr.substring(0, 10);
+    return cleanDate.substring(0, 7) === todayStr.substring(0, 7);
   };
 
   // Filter active and incomplete ordens
   const activeOrdens = ordens.filter(o => o.status !== 'Concluída' && o.status !== 'Cancelada');
 
-  // Today scheduled/created orders
-  const ordensDoDia = activeOrdens.filter(o => {
+  // Today scheduled/created orders (Including all statuses as requested - "independente do status")
+  const ordensDoDia = ordens.filter(o => {
+    if (o.status === 'Cancelada') return false; 
     const isTargetToday = isTodayMatch(o.scheduledVisitDate);
     const isCreatedToday = isTodayMatch(o.createdAt);
-    return isTargetToday || isCreatedToday;
+    // Also check delivery target if technician set it to today
+    const isDeliveryToday = isTodayMatch(o.deliveryTargetDate);
+    return isTargetToday || isCreatedToday || isDeliveryToday;
   });
 
   // Week scheduled/created orders
-  const ordensDaSemana = activeOrdens.filter(o => {
+  const ordensDaSemana = ordens.filter(o => {
+    if (o.status === 'Cancelada') return false;
     const isTargetWeek = isWeekMatch(o.scheduledVisitDate);
     const isCreatedWeek = isWeekMatch(o.createdAt);
     return isTargetWeek || isCreatedWeek;
   });
 
   // Month scheduled/created orders
-  const ordensDoMes = activeOrdens.filter(o => {
+  const ordensDoMes = ordens.filter(o => {
+    if (o.status === 'Cancelada') return false;
     const isTargetMonth = isMonthMatch(o.scheduledVisitDate);
     const isCreatedMonth = isMonthMatch(o.createdAt);
     return isTargetMonth || isCreatedMonth;

@@ -114,11 +114,19 @@ export default function OrdemServicoList({
   const [osToExport, setOsToExport] = useState<OrdemServico | null>(null);
   const [isExportingImage, setIsExportingImage] = useState(false);
 
+  // Helper to get YYYY-MM-DD in local time
+  const getLocalDateStr = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Help calculate dates
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateStr(new Date());
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const tomorrowStr = getLocalDateStr(tomorrow);
 
   useEffect(() => {
     if (initialSelectedOSId) {
@@ -209,9 +217,10 @@ export default function OrdemServicoList({
     // Filter by appointment visit date for technician agenda
     const matchesDate = (() => {
       if (dateAgendaFilter === 'Todos') return true;
-      if (dateAgendaFilter === 'Hoje') return o.scheduledVisitDate === todayStr;
-      if (dateAgendaFilter === 'Amanhã') return o.scheduledVisitDate === tomorrowStr;
-      if (dateAgendaFilter === 'Específica' && specificDate) return o.scheduledVisitDate === specificDate;
+      const scheduledStr = o.scheduledVisitDate ? o.scheduledVisitDate.substring(0, 10) : '';
+      if (dateAgendaFilter === 'Hoje') return scheduledStr === todayStr;
+      if (dateAgendaFilter === 'Amanhã') return scheduledStr === tomorrowStr;
+      if (dateAgendaFilter === 'Específica' && specificDate) return scheduledStr === (specificDate ? specificDate.substring(0, 10) : '');
       return true;
     })();
 

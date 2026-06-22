@@ -69,6 +69,7 @@ export interface OrdemServico {
   status: OSStatus;
   createdAt: string;
   scheduledVisitDate?: string;
+  deliveryTargetDate?: string;
   completionDate?: string;
   totalCostValue: number;
   taxaDeslocamento: number;

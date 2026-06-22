@@ -104,6 +104,7 @@ export default function OrdemServicoForm({
       status: 'Pendente',
       createdAt: formattedDate,
       scheduledVisitDate,
+      deliveryTargetDate: scheduledVisitDate ? new Date(new Date(scheduledVisitDate).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : new Date(new Date().getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       totalCostValue: Number(totalCostValue) || 0,
       taxaDeslocamento: Number(taxaDeslocamento) || 0,
       partsCostValue: partsCostTotal,
