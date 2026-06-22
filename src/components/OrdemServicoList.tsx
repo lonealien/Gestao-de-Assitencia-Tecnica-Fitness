@@ -108,8 +108,7 @@ export default function OrdemServicoList({
   const [sigClienteFinalInput, setSigClienteFinalInput] = useState<string>('');
   const [sigAberturaDataInput, setSigAberturaDataInput] = useState<string>('');
   const [sigFinalDataInput, setSigFinalDataInput] = useState<string>('');
-  const [editFotosAntes, setEditFotosAntes] = useState<string[]>([]);
-  const [editFotosDepois, setEditFotosDepois] = useState<string[]>([]);
+  const [editFotos, setEditFotos] = useState<{url: string; description: string}[]>([]);
 
   const [expandedOSId, setExpandedOSId] = useState<string | null>(null);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
@@ -159,8 +158,16 @@ export default function OrdemServicoList({
         setSigClienteFinalInput(os.sigClienteFinal || '');
         setSigAberturaDataInput(os.sigAberturaData || '');
         setSigFinalDataInput(os.sigFinalData || '');
-        setEditFotosAntes(os.fotosAntes || []);
-        setEditFotosDepois(os.fotosDepois || []);
+        
+        let allFotos: {url: string; description: string}[] = [];
+        if (os.fotos) {
+          allFotos = [...os.fotos];
+        } else {
+          // Migrate legacy format to unified format
+          if (os.fotosAntes) allFotos = [...allFotos, ...os.fotosAntes.map(url => ({url, description: "Antes"}))];
+          if (os.fotosDepois) allFotos = [...allFotos, ...os.fotosDepois.map(url => ({url, description: "Depois/Conclusão"}))];
+        }
+        setEditFotos(allFotos);
 
         // Reset all list filters to allow targeted element rendering
         setStatusFilter('Todos');
@@ -280,8 +287,7 @@ export default function OrdemServicoList({
       hasTecnicoChanged;
 
     const hasFotosChanged = 
-      JSON.stringify(editFotosAntes) !== JSON.stringify(os.fotosAntes || []) ||
-      JSON.stringify(editFotosDepois) !== JSON.stringify(os.fotosDepois || []);
+      JSON.stringify(editFotos) !== JSON.stringify(os.fotos || []);
 
     // Determine target/applied status. If completion date is present, force Status to 'Finalizada'.
     let appliedStatus = newStatus || os.status;
@@ -460,8 +466,10 @@ export default function OrdemServicoList({
       });
     }
 
-    updatedOS.fotosAntes = editFotosAntes;
-    updatedOS.fotosDepois = editFotosDepois;
+    updatedOS.fotos = editFotos;
+    // We can clear legacy fields when saving to avoid duplicating data.
+    updatedOS.fotosAntes = undefined;
+    updatedOS.fotosDepois = undefined;
     updatedOS.history = [...updatedOS.history, ...historyEntries];
     
     onUpdateOS(updatedOS);
@@ -1172,8 +1180,15 @@ export default function OrdemServicoList({
                             setSigClienteFinalInput(os.sigClienteFinal || '');
                             setSigAberturaDataInput(os.sigAberturaData || '');
                             setSigFinalDataInput(os.sigFinalData || '');
-                            setEditFotosAntes(os.fotosAntes || []);
-                            setEditFotosDepois(os.fotosDepois || []);
+
+                            let allFotos: {url: string; description: string}[] = [];
+                            if (os.fotos) {
+                              allFotos = [...os.fotos];
+                            } else {
+                              if (os.fotosAntes) allFotos = [...allFotos, ...os.fotosAntes.map(url => ({url, description: "Antes"}))];
+                              if (os.fotosDepois) allFotos = [...allFotos, ...os.fotosDepois.map(url => ({url, description: "Depois/Conclusão"}))];
+                            }
+                            setEditFotos(allFotos);
                           }}
                           className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 text-white dark:text-neutral-900 px-4 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm dark:shadow-none hover:shadow-md transition-all inline-flex items-center gap-1.5 cursor-pointer"
                         >
@@ -1398,80 +1413,51 @@ export default function OrdemServicoList({
                         </div>
                       </div>
 
-                      {/* Photo Evidences (Before & After) */}
+                      {/* Photo Evidences */}
                       <div className="border-t-2 border-black pt-4 space-y-3">
-                        <span className="block text-xs font-black uppercase text-neutral-900 dark:text-neutral-100 tracking-wider flex items-center gap-1.5">
+                        <span className="block text-xs font-black uppercase text-neutral-900 dark:text-neutral-100 tracking-wider flex items-center gap-1.5 mb-2">
                           <Camera className="w-4 h-4 text-neutral-900 dark:text-neutral-100" />
-                          Evidências Fotográficas (Antes e Depois)
+                          Evidências Fotográficas do Serviço ({editFotos.length})
                         </span>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Antes */}
-                          <div>
-                            <label className="block text-xs font-black uppercase tracking-wider text-rose-600 mb-2">Fotos Antes do Serviço ({editFotosAntes.length}/3)</label>
+                        <div className="flex flex-col gap-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                            {editFotos.map((photo, idx) => (
+                              <div key={idx} className="relative flex flex-col gap-1 group">
+                                <img src={photo.url} alt={`Foto ${idx + 1}`} className="w-full h-32 object-cover block rounded-lg bg-neutral-100 dark:bg-neutral-800" referrerPolicy="no-referrer" />
+                                <button
+                                  onClick={() => setEditFotos(editFotos.filter((_, i) => i !== idx))}
+                                  className="absolute top-1 right-1 bg-red-600/90 hover:bg-red-700 text-white rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                                <input
+                                  type="text"
+                                  placeholder="Descrição da foto..."
+                                  value={photo.description}
+                                  onChange={(e) => {
+                                    const newFotos = [...editFotos];
+                                    newFotos[idx].description = e.target.value;
+                                    setEditFotos(newFotos);
+                                  }}
+                                  className="w-full text-[10px] font-medium border border-transparent hover:border-neutral-300 dark:hover:border-neutral-600 focus:border-emerald-500 rounded px-1.5 py-1 focus:outline-none bg-transparent focus:bg-white dark:focus:bg-neutral-900 transition-colors text-neutral-900 dark:text-neutral-100"
+                                />
+                              </div>
+                            ))}
                             
-                            <div className="flex flex-col gap-4">
-                              {editFotosAntes.map((img, idx) => (
-                                <div key={idx} className="relative inline-block border border-neutral-300 dark:border-neutral-600 shadow-sm transition-all focus-within:ring-2 rounded hover:shadow-md">
-                                  <img src={img} alt={`Antes ${idx + 1}`} className="max-w-full h-auto block rounded" />
-                                  <button
-                                    onClick={() => setEditFotosAntes(editFotosAntes.filter((_, i) => i !== idx))}
-                                    className="absolute -top-3 -right-3 bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              ))}
-                              {editFotosAntes.length < 3 && (
-                                <label className="flex items-center justify-center border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 shadow-sm rounded-xl px-4 py-8 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-95 group">
-                                  <input 
-                                    type="file" accept="image/*" capture="environment" className="hidden"
-                                    onChange={async (e) => {
-                                      if (e.target.files?.[0]) {
-                                        const c = await compressImage(e.target.files[0]);
-                                        setEditFotosAntes([...editFotosAntes, c]);
-                                      }
-                                    }}
-                                  />
-                                  <Camera className="w-8 h-8 text-neutral-600 dark:text-neutral-300 mr-3 group-hover:text-neutral-900 dark:group-hover:text-white" />
-                                  <span className="text-xs font-black text-neutral-700 dark:text-neutral-200 uppercase tracking-wider group-hover:text-neutral-900 dark:group-hover:text-white">Carregar Foto</span>
-                                </label>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Depois */}
-                          <div>
-                            <label className="block text-xs font-black uppercase tracking-wider text-emerald-600 mb-2">Fotos Depois do Serviço ({editFotosDepois.length}/3)</label>
-                            
-                            <div className="flex flex-col gap-4">
-                              {editFotosDepois.map((img, idx) => (
-                                <div key={idx} className="relative inline-block border border-neutral-300 dark:border-neutral-600 shadow-sm transition-all focus-within:ring-2 rounded hover:shadow-md">
-                                  <img src={img} alt={`Depois ${idx + 1}`} className="max-w-full h-auto block rounded" />
-                                  <button
-                                    onClick={() => setEditFotosDepois(editFotosDepois.filter((_, i) => i !== idx))}
-                                    className="absolute -top-3 -right-3 bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              ))}
-                              {editFotosDepois.length < 3 && (
-                                <label className="flex items-center justify-center border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 shadow-sm rounded-xl px-4 py-8 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all active:scale-95 group">
-                                  <input 
-                                    type="file" accept="image/*" capture="environment" className="hidden"
-                                    onChange={async (e) => {
-                                      if (e.target.files?.[0]) {
-                                        const c = await compressImage(e.target.files[0]);
-                                        setEditFotosDepois([...editFotosDepois, c]);
-                                      }
-                                    }}
-                                  />
-                                  <Camera className="w-8 h-8 text-neutral-600 dark:text-neutral-300 mr-3 group-hover:text-neutral-900 dark:group-hover:text-white" />
-                                  <span className="text-xs font-black text-neutral-700 dark:text-neutral-200 uppercase tracking-wider group-hover:text-neutral-900 dark:group-hover:text-white">Carregar Foto</span>
-                                </label>
-                              )}
-                            </div>
+                            <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/40 rounded-lg p-2 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors active:scale-95 group h-32">
+                              <input 
+                                type="file" accept="image/*" className="hidden"
+                                onChange={async (e) => {
+                                  if (e.target.files?.[0]) {
+                                    const c = await compressImage(e.target.files[0]);
+                                    setEditFotos([...editFotos, { url: c, description: "" }]);
+                                  }
+                                }}
+                              />
+                              <Camera className="w-6 h-6 text-neutral-400 dark:text-neutral-500 mb-1 group-hover:text-neutral-700 dark:group-hover:text-neutral-300" />
+                              <span className="text-[10px] sm:text-xs font-bold text-center text-neutral-500 dark:text-neutral-400 uppercase tracking-wider group-hover:text-neutral-700 dark:group-hover:text-neutral-300">Nova Foto</span>
+                            </label>
                           </div>
                         </div>
                       </div>
@@ -1633,13 +1619,14 @@ export default function OrdemServicoList({
                                   )}
                                 </div>
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <SignaturePad
-                                    label="Assinatura do Técnico"
-                                    initialValue={sigTecnicoAberturaInput}
-                                    onSave={(base64) => setSigTecnicoAberturaInput(base64)}
-                                    onClear={() => setSigTecnicoAberturaInput('')}
-                                  />
+                                <div className="grid grid-cols-1 gap-4">
+                                  <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 p-4 flex flex-col items-center text-center justify-center gap-2">
+                                     <span className="text-[10px] font-black uppercase text-neutral-500">Assinatura do Técnico / Responsável</span>
+                                     <span className="text-xl font-medium font-serif italic text-neutral-700 dark:text-neutral-300">
+                                       {activeUserName}
+                                     </span>
+                                     <span className="text-[8px] font-bold text-emerald-600 uppercase bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Visto Automático</span>
+                                  </div>
                                   
                                   <SignaturePad
                                     label="Assinatura do Cliente"
@@ -1772,40 +1759,33 @@ export default function OrdemServicoList({
 
               {/* High Contrast Banner showing Completion Status & Dates */}
               {(() => {
-                const isConcluida = osToExport.status === 'Concluída';
-                const showStageMessage = osToExport.status === 'Em Conserto' || osToExport.status === 'Em Execução';
+                const isConcluida = osToExport.status === 'Finalizada';
                 
                 // Hunt for the date when it was finalized in history
                 const conclusionDate = osToExport.completionDate 
-                  ? new Date(osToExport.completionDate).toLocaleDateString('pt-BR') 
+                  ? new Date(osToExport.completionDate + 'T12:00:00').toLocaleDateString('pt-BR') 
                   : '-';
                 
                 const visitDateStr = osToExport.scheduledVisitDate
-                  ? new Date(osToExport.scheduledVisitDate).toLocaleDateString('pt-BR')
+                  ? new Date(osToExport.scheduledVisitDate + 'T12:00:00').toLocaleDateString('pt-BR')
                   : '-';
 
                 return (
                   <div className={`border border-neutral-200 dark:border-neutral-700 p-3 flex justify-between items-center ${isConcluida ? 'bg-emerald-100 dark:bg-emerald-900/50' : 'bg-neutral-100 dark:bg-neutral-800/50'}`}>
                     <div>
                       <span className="block text-[8px] font-black uppercase text-neutral-900 dark:text-neutral-100 tracking-widest">Estado da Ordem</span>
-                      <span className="text-sm font-black uppercase text-neutral-900 dark:text-neutral-100">{isConcluida ? 'Concluída / Finalizada ✔️' : osToExport.status}</span>
+                      <span className="text-sm font-black uppercase text-neutral-900 dark:text-neutral-100">{isConcluida ? 'Finalizada ✔️' : osToExport.status}</span>
                     </div>
                     
                     <div className="flex gap-4 text-right">
                       <div>
-                        <span className="block text-[8px] font-black uppercase text-neutral-600 tracking-widest">Agendamento</span>
+                        <span className="block text-[8px] font-black uppercase text-neutral-600 tracking-widest">
+                          {(isConcluida || conclusionDate !== '-') ? 'Data de Conclusão' : 'Agendamento'}
+                        </span>
                         <span className="text-xs font-black font-mono text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 border border-neutral-300 dark:border-neutral-600 inline-block mt-0.5">
-                          {visitDateStr}
+                          {(isConcluida || conclusionDate !== '-') ? conclusionDate : visitDateStr}
                         </span>
                       </div>
-                      {isConcluida && (
-                        <div>
-                          <span className="block text-[8px] font-black uppercase text-neutral-600 tracking-widest">Finalização</span>
-                          <span className="text-xs font-black font-mono text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 px-2 py-0.5 border border-neutral-200 dark:border-neutral-700 inline-block mt-0.5">
-                            {conclusionDate}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
@@ -1950,23 +1930,30 @@ export default function OrdemServicoList({
               </div>
 
               {/* Payment Receipt / Proof of Quittance (Exclusive for Finalized OS) */}
-              {osToExport.status === 'Concluída' && (
+              {osToExport.status === 'Finalizada' && (
                 <div className="border border-neutral-200 dark:border-neutral-700 p-3 bg-emerald-50 dark:bg-emerald-950/20 space-y-2 mt-2">
                   <div className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-700 pb-1.5">
                     <span className="text-[9px] font-black uppercase text-emerald-800 tracking-wider flex items-center gap-1">
                       <ClipboardCheck className="w-3.5 h-3.5 text-emerald-700" />
                       Recibo de Pagamento & Quitação de Serviços
                     </span>
-                    <span className="text-[8px] font-semibold bg-emerald-600 text-white dark:text-neutral-900 px-1.5 py-0.5 uppercase tracking-widest">Pago / Quitado</span>
+                    <span className="text-[8px] font-semibold bg-emerald-600 text-white px-1.5 py-0.5 uppercase tracking-widest">Pago / Quitado</span>
                   </div>
                   <p className="text-[9.2px] font-bold text-neutral-800 leading-relaxed text-justify">
-                    Declaramos que o serviço especificado nesta Ordem de Serviço foi concluído e testado. Confirmamos o recebimento e a quitação integral do valor de <strong className="text-neutral-900 dark:text-neutral-100 font-extrabold uppercase">R$ {osToExport.totalCostValue.toFixed(2)}</strong> pago à Assistência Técnica / Técnico Responsável, sendo dado com este instrumento plena e geral quitação de direitos pelo reparo do equipamento, validado pelas assinaturas registradas abaixo.
+                    Declaramos que o serviço especificado nesta Ordem de Serviço foi concluído e testado. Confirmamos o recebimento e a quitação integral do valor de <strong className="font-extrabold uppercase text-emerald-900 text-[10px]">R$ {osToExport.totalCostValue.toFixed(2)}</strong> pago à Assistência Técnica / Técnico Responsável, sendo dado com este instrumento plena e geral quitação de direitos pelo reparo do equipamento, validado pelas assinaturas registradas abaixo.
                   </p>
-                  <div className="pt-2 border-t border-emerald-200 text-[8.5px] font-black text-emerald-900 uppercase tracking-widest leading-normal">
-                    🛡️ GUST/GARANTIA: 3 meses de garantia por defeito de fabricação nas peças trocadas e servições prestados.
-                  </div>
                 </div>
               )}
+
+              {/* Warranty and Service Notice */}
+              <div className="mt-2 text-center p-2 border-2 border-dashed border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800">
+                <span className="text-[9px] font-black uppercase tracking-widest text-neutral-900 dark:text-neutral-100 block mb-0.5">
+                  TERMO DE GARANTIA LIMITADA: 3 MESES
+                </span>
+                <p className="text-[8px] font-bold text-neutral-600 dark:text-neutral-400">
+                  Garantia de 3 (três) meses por defeito de fabricação nas peças trocadas e serviço prestado.
+                </p>
+              </div>
 
               {/* Termo de Visto & Assinatura da Ordem de Serviço */}
               <div className="border border-neutral-200 dark:border-neutral-700 p-2.5 bg-neutral-50/50 dark:bg-neutral-800/50 space-y-2 select-none mt-2">
@@ -1976,15 +1963,23 @@ export default function OrdemServicoList({
 
                 <div className="grid grid-cols-2 gap-3.5">
                   <div className="text-center flex flex-col items-center">
-                    <div className="w-full h-11 flex items-center justify-center border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 relative">
-                      {osToExport.sigTecnicoAbertura ? (
+                    <div className="w-full h-11 flex flex-col items-center justify-center border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 relative">
+                      {(osToExport.sigTecnicoAbertura && osToExport.sigTecnicoAbertura.startsWith('data:image')) ? (
                         <img 
                           src={osToExport.sigTecnicoAbertura} 
                           alt="Assinatura Técnico" 
                           style={{ width: '130px', height: '36px', objectFit: 'contain', display: 'block' }} 
                         />
                       ) : (
-                        <span className="text-[5px] text-zinc-350 italic uppercase absolute bottom-0.5">Sem assinatura digital</span>
+                        <>
+                          <span className="text-[12px] font-serif italic text-neutral-800 font-medium">
+                            {(() => {
+                              const tecUser = usuarios.find(u => u.tecnicoId === osToExport.tecnicoId);
+                              return tecUser ? tecUser.name : 'Visto Eletrônico';
+                            })()}
+                          </span>
+                          <span className="text-[5px] text-emerald-600 font-bold uppercase absolute bottom-0.5">Visto Automático</span>
+                        </>
                       )}
                     </div>
                     <span className="block text-[6.5px] font-black text-neutral-700 uppercase tracking-widest mt-1">Assinatura do Técnico / Responsável</span>
@@ -2024,7 +2019,7 @@ export default function OrdemServicoList({
             </div>
 
             {/* PAGE 2: Photos Gallery (Rendered only on a second page if photos exist) */}
-            {((osToExport.fotosAntes && osToExport.fotosAntes.length > 0) || (osToExport.fotosDepois && osToExport.fotosDepois.length > 0)) && (
+            {((osToExport.fotos && osToExport.fotos.length > 0) || (osToExport.fotosAntes && osToExport.fotosAntes.length > 0) || (osToExport.fotosDepois && osToExport.fotosDepois.length > 0)) && (
               <div 
                 id="os-receipt-card-page2"
                 className="bg-white p-[20mm] space-y-6 font-sans text-neutral-900 relative shrink-0 shadow-lg flex flex-col justify-between"
@@ -2045,7 +2040,20 @@ export default function OrdemServicoList({
                   </div>
 
                   <div className="space-y-6 py-4">
-                    {osToExport.fotosAntes && osToExport.fotosAntes.length > 0 && (
+                    {osToExport.fotos && osToExport.fotos.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-3">
+                          {osToExport.fotos.map((photo, index) => (
+                            <div key={`foto-${index}`} className="flex flex-col items-center bg-neutral-50 p-2 border border-neutral-200 rounded-lg shadow-sm">
+                              <img src={photo.url} alt={`Foto ${index + 1}`} className="max-h-[160px] object-contain rounded" referrerPolicy="no-referrer" />
+                              <span className="text-[7px] font-bold text-neutral-600 uppercase mt-2 max-w-[150px] text-center truncate">{photo.description || `Foto ${index + 1}`}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {(!osToExport.fotos || osToExport.fotos.length === 0) && osToExport.fotosAntes && osToExport.fotosAntes.length > 0 && (
                       <div className="space-y-3">
                         <span className="block text-[8px] font-black text-rose-600 uppercase tracking-widest border-b border-rose-100 pb-1">
                           Fotos - Antes do Serviço
@@ -2061,7 +2069,7 @@ export default function OrdemServicoList({
                       </div>
                     )}
                     
-                    {osToExport.fotosDepois && osToExport.fotosDepois.length > 0 && (
+                    {(!osToExport.fotos || osToExport.fotos.length === 0) && osToExport.fotosDepois && osToExport.fotosDepois.length > 0 && (
                       <div className="space-y-3 pt-4">
                         <span className="block text-[8px] font-black text-emerald-600 uppercase tracking-widest border-b border-emerald-100 pb-1">
                           Fotos - Depois do Serviço / Conclusão

@@ -116,6 +116,9 @@ export default function LoginScreen({
                       placeholder="seu nome ou e-mail"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
                       className="w-full border border-neutral-200 dark:border-neutral-700 rounded-2xl pl-10 pr-3 py-2.5 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:bg-neutral-50 text-sm font-bold"
                     />
                   </div>

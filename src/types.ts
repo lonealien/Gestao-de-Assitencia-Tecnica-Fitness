@@ -46,6 +46,11 @@ export interface OSHistory {
   author: string;
 }
 
+export interface OSPhoto {
+  url: string;
+  description: string;
+}
+
 export interface OrdemServico {
   id: string;
   idFormatado: string;
@@ -85,6 +90,7 @@ export interface OrdemServico {
   observacoes?: string;
   fotosAntes?: string[];
   fotosDepois?: string[];
+  fotos?: OSPhoto[];
 }
 
 export interface StoreSettings {
