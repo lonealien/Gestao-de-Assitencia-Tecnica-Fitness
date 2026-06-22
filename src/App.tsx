@@ -29,7 +29,7 @@ import {
   syncSettings, saveSettingsToFirestore 
 } from './db';
 import { db } from './firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function App() {
   // Load initial persistent sets
@@ -126,10 +126,13 @@ export default function App() {
     // Initial load check for migration - collection by collection & syncing preconfigured files
     const checkMigration = async () => {
       try {
-        // A. Run one-time legacy mock cleanup/purge if not already completed
-        const alreadyPurged = localStorage.getItem('has_purged_legacy_examples_v3') === 'true';
+        // A. Run one-time legacy mock cleanup/purge if not already completed (check Firestore global flag)
+        const migrationDocRef = doc(db, 'system', 'migration_status');
+        const migrationDoc = await getDoc(migrationDocRef);
+        const alreadyPurged = migrationDoc.exists() && migrationDoc.data().has_purged_v3 === true;
+
         if (!alreadyPurged) {
-          console.log('Running one-time legacy mock cleanup...');
+          console.log('Running one-time legacy mock cleanup (Global)...');
           // Fetch and delete all orders
           const ordensSnap = await getDocs(collection(db, 'ordens'));
           for (const doc of ordensSnap.docs) {
@@ -171,6 +174,7 @@ export default function App() {
           localStorage.removeItem('ordens_fitness_v2');
           localStorage.removeItem('usuarios_fitness_v2');
 
+          await setDoc(migrationDocRef, { has_purged_v3: true, timestamp: new Date().toISOString() });
           localStorage.setItem('has_purged_legacy_examples_v3', 'true');
           console.log('Legacy mock data purge completed!');
         }
