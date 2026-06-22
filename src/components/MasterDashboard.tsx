@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { 
   Building2, Users, ClipboardList, Plus, Trash2, Calendar, 
   Download, Upload, Check, AlertCircle, Eye, Shield, 
-  Search, ShieldAlert, CheckCircle, Ban, X, KeyRound, LogOut, Sun, Moon, ChevronDown, ChevronRight, MessageCircle
+  Search, ShieldAlert, CheckCircle, Ban, X, KeyRound, LogOut, Sun, Moon, ChevronDown, ChevronRight, MessageCircle, Settings
 } from 'lucide-react';
 import { AssistenciaTecnica, OrdemServico, Tecnico, AppUser } from '../types';
 import { maskPhone, maskDocument, maskCEP } from '../utils';
@@ -29,6 +29,7 @@ interface MasterDashboardProps {
     usuarios: AppUser[];
   }) => Promise<void>;
   onPurgeDatabase?: () => Promise<void>;
+  onUpdateUser?: (user: AppUser) => void;
 }
 
 export default function MasterDashboard({
@@ -47,7 +48,8 @@ export default function MasterDashboard({
   onDeleteUser,
   onToggleUserActive,
   onRestoreBackup,
-  onPurgeDatabase
+  onPurgeDatabase,
+  onUpdateUser
 }: MasterDashboardProps) {
   const [activeTab, setActiveTab] = useState<'empresas' | 'ordens' | 'usuarios'>('empresas');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -97,6 +99,45 @@ export default function MasterDashboard({
   const [newAdminEmailState, setNewAdminEmailState] = useState('');
   const [newAdminPasswordState, setNewAdminPasswordState] = useState('');
   const [newAdminAssistenciaId, setNewAdminAssistenciaId] = useState('');
+
+  // Master Profile Edit States
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [configName, setConfigName] = useState('');
+  const [configEmail, setConfigEmail] = useState('');
+  const [configPhone, setConfigPhone] = useState('');
+  const [configPassword, setConfigPassword] = useState('');
+
+  const handleOpenConfigModal = () => {
+    setConfigName(loggedUser.name || '');
+    setConfigEmail(loggedUser.email || '');
+    setConfigPhone(loggedUser.phone || '');
+    setConfigPassword(loggedUser.password || '');
+    setShowConfigModal(true);
+  };
+
+  const handleSaveConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!configName.trim() || !configEmail.trim()) {
+      triggerErrorMsg('Nome e E-mail são obrigatórios.');
+      return;
+    }
+
+    const updatedUser: AppUser = {
+      ...loggedUser,
+      name: configName.trim(),
+      email: configEmail.trim(),
+      phone: configPhone.trim(),
+      password: configPassword.trim()
+    };
+
+    if (onUpdateUser) {
+      onUpdateUser(updatedUser);
+      triggerSuccessMsg('Perfil Master atualizado com sucesso!');
+      setShowConfigModal(false);
+    } else {
+      triggerErrorMsg('Não foi possível salvar as alterações (onUpdateUser não configurado).');
+    }
+  };
 
   const triggerSuccessMsg = (msg: string) => {
     setSuccessMsg(msg);
@@ -469,6 +510,13 @@ export default function MasterDashboard({
               title="Alternar Tema Escuro"
             >
               {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={handleOpenConfigModal}
+              className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 p-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl hover:shadow-md transition-all cursor-pointer flex items-center justify-center"
+              title="Configurações do Perfil"
+            >
+              <Settings className="w-4 h-4" />
             </button>
 
             <div className="hidden sm:block text-right">
@@ -1173,6 +1221,59 @@ export default function MasterDashboard({
         )}
 
       </main>
+
+        {showConfigModal && (
+          <div className="fixed inset-0 bg-neutral-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+              <h2 className="text-lg font-black uppercase mb-4 text-neutral-900 dark:text-neutral-100">Configurações do Perfil</h2>
+              <form onSubmit={handleSaveConfig} className="flex flex-col gap-4">
+                <input
+                  type="text"
+                  placeholder="Nome"
+                  value={configName}
+                  onChange={(e) => setConfigName(e.target.value)}
+                  className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl py-2 px-3 text-sm"
+                />
+                <input
+                  type="email"
+                  placeholder="E-mail"
+                  value={configEmail}
+                  onChange={(e) => setConfigEmail(e.target.value)}
+                  className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl py-2 px-3 text-sm"
+                />
+                <input
+                  type="tel"
+                  placeholder="Telefone"
+                  value={configPhone}
+                  onChange={(e) => setConfigPhone(e.target.value)}
+                  className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl py-2 px-3 text-sm"
+                />
+                <input
+                  type="password"
+                  placeholder="Senha"
+                  value={configPassword}
+                  onChange={(e) => setConfigPassword(e.target.value)}
+                  className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl py-2 px-3 text-sm"
+                />
+                <div className="flex justify-end gap-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfigModal(false)}
+                    className="bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-300 px-4 py-2 text-xs font-bold uppercase rounded-xl cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl cursor-pointer"
+                  >
+                    Salvar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
       {/* Footer copyright */}
       <footer className="bg-white dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 py-6 mt-16 text-neutral-500 dark:text-neutral-400 text-[10px] font-black uppercase tracking-wider">

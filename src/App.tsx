@@ -37,6 +37,8 @@ export default function App() {
   const [tecnicos, setTecnicos] = useState<Tecnico[]>(() => loadTecnicos());
   const [ordens, setOrdens] = useState<OrdemServico[]>(() => loadOrdens());
   const [usuarios, setUsuarios] = useState<AppUser[]>(() => loadUsers());
+  const masterUser = usuarios.find(u => u.role === 'MASTER');
+  const masterPhone = masterUser?.phone || '';
   const [loggedUser, setLoggedUser] = useState<AppUser | null>(null);
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({ name: 'ASSISTÊNCIA' });
   const [initialSelectedOSId, setInitialSelectedOSId] = useState<string | null>(null);
@@ -437,6 +439,13 @@ export default function App() {
         onUpdateAssistencia={(updatedAst) => saveToFirestore('assistencias', updatedAst)}
         onAddUser={(newUser) => saveToFirestore('usuarios', newUser)}
         onDeleteUser={(id) => deleteFromFirestore('usuarios', id)}
+        onUpdateUser={(updatedUser) => {
+          saveToFirestore('usuarios', updatedUser);
+          if (loggedUser && loggedUser.id === updatedUser.id) {
+            setLoggedUser(updatedUser);
+            localStorage.setItem('logged_user_fitness', JSON.stringify(updatedUser));
+          }
+        }}
         onPurgeDatabase={handlePurgeAllData}
         onToggleUserActive={(id) => {
           const u = usuarios.find(usr => usr.id === id);
@@ -617,7 +626,7 @@ export default function App() {
                   O período de licença/créditos de acesso desta assistência ({currentAssistencia?.name}) expirou em {currentAssistencia?.expiresAt ? new Date(currentAssistencia.expiresAt).toLocaleDateString('pt-BR') : 'Mínimo 30 dias'}. Todas as permissões de edição/registro foram suspensas. Para regularizar o acesso, entre em contato com o Administrador Master (clementebsf@gmail.com).
                 </p>
                 <a 
-                  href={`https://wa.me/?text=${encodeURIComponent(`Olá, gostaria de regularizar o acesso do sistema para a assistência: ${currentAssistencia?.name}`)}`} 
+                  href={`https://wa.me/${masterPhone ? masterPhone.replace(/\D/g, '') : ''}?text=${encodeURIComponent(`Olá, gostaria de regularizar o acesso do sistema para a assistência: ${currentAssistencia?.name}`)}`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="mt-3 bg-[#25D366] hover:bg-[#1DA851] text-white font-black text-[10px] px-3 py-1.5 rounded-lg inline-flex items-center gap-2 uppercase tracking-wide cursor-pointer transition-colors"
