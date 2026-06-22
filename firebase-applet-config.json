@@ -1,10 +1,10 @@
 {
-  "projectId": "woven-bivouac-kk7s0",
-  "appId": "1:964126565029:web:c72a40a947e1a7d729e34c",
-  "apiKey": "AIzaSyCa_PdxFwIMOGOOvY1wngWn5m7wydXNA5A",
-  "authDomain": "woven-bivouac-kk7s0.firebaseapp.com",
+  "projectId": "gestao-assistencias-fitness",
+  "appId": "1:104060736780:web:fa4cc5501230795f04a529",
+  "apiKey": "AIzaSyBBfElfgoCQqTlJ6Xpr4YnalKEdKNMFiBI",
+  "authDomain": "gestao-assistencias-fitness.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-7ad3c002-2b58-4d4f-b9ea-8955bae2e53a",
-  "storageBucket": "woven-bivouac-kk7s0.firebasestorage.app",
-  "messagingSenderId": "964126565029",
+  "storageBucket": "gestao-assistencias-fitness.firebasestorage.app",
+  "messagingSenderId": "104060736780",
   "measurementId": ""
 }

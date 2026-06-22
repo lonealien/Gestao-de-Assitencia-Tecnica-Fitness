@@ -111,7 +111,7 @@ export default function LoginScreen({
                     <Mail className="absolute left-3 top-3 w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" />
                     <input
                       id="login-email"
-                      type="text"
+                      type="email"
                       required
                       placeholder="seu nome ou e-mail"
                       value={loginEmail}

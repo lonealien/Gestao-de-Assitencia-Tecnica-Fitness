@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppUser, AssistenciaTecnica, Tecnico, UserRole, StoreSettings } from '../types';
 import { UserPlus, Shield, Hammer, Building2, Eye, KeyRound, Check, AlertCircle, X, Trash2, User, Ban, CheckCircle, Pencil } from 'lucide-react';
 import { getStoreDomain, maskPhone } from '../utils';
@@ -54,6 +54,19 @@ export default function UserManagement({
   // Custom option to create a new Tecnico *and* its user at the same time for Oficinas!
   const [createTecOnTheFly, setCreateTecOnTheFly] = useState(true);
   const [tecPhone, setTecPhone] = useState('');
+
+  const [minimizedUsers, setMinimizedUsers] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setMinimizedUsers(new Set(usuarios.map(u => u.id)));
+  }, [usuarios]);
+  
+  const toggleMinimize = (userId: string) => {
+    const next = new Set(minimizedUsers);
+    if (next.has(userId)) next.delete(userId);
+    else next.add(userId);
+    setMinimizedUsers(next);
+  };
 
   // Inline editing states for admin
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -250,11 +263,7 @@ export default function UserManagement({
             <KeyRound className="w-5 h-5 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" />
             Gerenciamento de Acessos & Usuários
           </h3>
-          <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mt-1">
-            {currentUser.role === 'ADMIN'
-              ? 'Controle total de credenciais de administradores, oficinas e técnicos cadastrados.'
-              : 'Gerencie as senhas e usuários da sua própria oficina técnica.'}
-          </p>
+
         </div>
 
         {currentUser.role !== 'TECNICO' && (
@@ -814,10 +823,22 @@ export default function UserManagement({
             
             return (
               <div key={u.id} className="bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-2xl p-4 shadow-sm space-y-3">
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleMinimize(u.id)}>
                   <div>
-                    <h5 className="font-black uppercase text-neutral-900 dark:text-neutral-100 text-sm">{u.name}</h5>
+                    <h5 className="font-black uppercase text-neutral-900 dark:text-neutral-100 text-sm flex items-center gap-2">
+                       {minimizedUsers.has(u.id) ? '▶' : '▼'} {u.name}
+                    </h5>
                     <p className="font-mono text-[10px] text-neutral-500">{u.email}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-[9px] font-black uppercase ${
+                    u.role === 'ADMIN' ? 'bg-amber-300 text-neutral-900' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'
+                  }`}>
+                    {u.role}
+                  </span>
+                </div>
+                
+                {!minimizedUsers.has(u.id) && (
+                  <>
                     {u.phone && (
                       <div className="mt-1">
                         <a 
@@ -830,59 +851,86 @@ export default function UserManagement({
                         </a>
                       </div>
                     )}
-                  </div>
-                  <span className={`px-2 py-0.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-[9px] font-black uppercase ${
-                    u.role === 'ADMIN' ? 'bg-amber-300 text-neutral-900' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300'
-                  }`}>
-                    {u.role}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-900/50 p-2 rounded-xl text-[10px] font-mono border border-neutral-100 dark:border-neutral-800">
-                  <Eye className="w-3 h-3 text-neutral-400" />
-                  <span className="text-neutral-900 dark:text-neutral-100">{u.password}</span>
-                  {!u.active && (
-                    <span className="ml-auto text-[8px] font-black uppercase text-rose-600 bg-rose-100 px-1 rounded-sm">Inativo</span>
-                  )}
-                </div>
+                    
+                    <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-900/50 p-2 rounded-xl text-[10px] font-mono border border-neutral-100 dark:border-neutral-800">
+                      <Eye className="w-3 h-3 text-neutral-400" />
+                      <span className="text-neutral-900 dark:text-neutral-100">{u.password}</span>
+                      {!u.active && (
+                        <span className="ml-auto text-[8px] font-black uppercase text-rose-600 bg-rose-100 px-1 rounded-sm">Inativo</span>
+                      )}
+                    </div>
 
-                {(linkedAst || linkedTec) && (
-                  <div className="text-[10px] space-y-1">
-                    {linkedAst && <p className="text-neutral-500 uppercase font-black tracking-tight flex items-center gap-1"><Building2 className="w-3 h-3" /> {linkedAst.name}</p>}
-                    {linkedTec && <p className="text-neutral-500 uppercase font-black tracking-tight flex items-center gap-1"><Hammer className="w-3 h-3" /> {linkedTec.name}</p>}
-                  </div>
+                    {/* Edit Form Area */}
+                    {editingUserId === u.id ? (
+                      <div className="bg-amber-50 dark:bg-amber-900/30 p-3 rounded-xl border border-amber-200 dark:border-amber-700 space-y-2 mt-2">
+                        <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full text-xs p-1 border rounded" placeholder="Nome" />
+                        <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="w-full text-xs p-1 border rounded" placeholder="E-mail" />
+                        <input type="text" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} className="w-full text-xs p-1 border rounded" placeholder="Senha" />
+                        <div className="flex gap-2">
+                          <button className="bg-emerald-500 text-white px-2 py-1 text-xs rounded" onClick={() => handleSaveEdit(u)}>Salvar</button>
+                          <button className="bg-neutral-300 px-2 py-1 text-xs rounded" onClick={() => setEditingUserId(null)}>Cancelar</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {(linkedAst || linkedTec) && (
+                          <div className="text-[10px] space-y-1">
+                            {linkedAst && <p className="text-neutral-500 uppercase font-black tracking-tight flex items-center gap-1"><Building2 className="w-3 h-3" /> {linkedAst.name}</p>}
+                            {linkedTec && <p className="text-neutral-500 uppercase font-black tracking-tight flex items-center gap-1"><Hammer className="w-3 h-3" /> {linkedTec.name}</p>}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-700">
+                          {/* EDIT BUTTON */}
+                          {(currentUser.role === 'ADMIN' || currentUser.role === 'ASSISTENCIA_GERENTE') && (
+                            <button
+                              onClick={() => {
+                                setEditingUserId(u.id);
+                                setEditName(u.name);
+                                setEditEmail(u.email);
+                                setEditPassword(u.password || '');
+                                setEditRole(u.role);
+                                setEditPhone(u.phone || '');
+                              }}
+                              className="p-2 bg-amber-100 text-amber-700 rounded-xl"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+                          
+                          {(currentUser.role === 'ADMIN' || currentUser.role === 'ASSISTENCIA_GERENTE') && (
+                            <button
+                              onClick={() => onToggleUserActive(u.id)}
+                              className={`p-2 ${u.active ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400' : 'bg-rose-100 text-rose-600'} rounded-xl transition-colors`}
+                            >
+                              {u.active ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setDeleteConfirm({
+                                title: "Confirmar Exclusão de Usuário",
+                                message: `Deseja realmente excluir permanentemente o usuário "${u.name}"?\n\nDigite a senha para confirmar:`,
+                                onConfirm: () => {
+                                  const password = prompt("Digite a senha do admin:");
+                                  if (password === "0000") {
+                                    onDeleteUser(u.id);
+                                  } else if (password !== null) {
+                                    alert("Senha incorreta.");
+                                  }
+                                }
+                              });
+                            }}
+                            disabled={u.role === 'MASTER'}
+                            className="p-2 bg-rose-100 text-rose-600 rounded-xl disabled:opacity-30 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
                 )}
-
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-700">
-                  {(currentUser.role === 'ADMIN' || currentUser.role === 'ASSISTENCIA_GERENTE') && (
-                    <button
-                      onClick={() => onToggleUserActive(u.id)}
-                      className={`p-2 ${u.active ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400' : 'bg-rose-100 text-rose-600'} rounded-xl transition-colors`}
-                    >
-                      {u.active ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setDeleteConfirm({
-                        title: "Confirmar Exclusão de Usuário",
-                        message: `Deseja realmente excluir permanentemente o usuário "${u.name}"?\n\nDigite a senha para confirmar:`,
-                        onConfirm: () => {
-                          const password = prompt("Digite a senha do admin:");
-                          if (password === "0000") {
-                            onDeleteUser(u.id);
-                          } else if (password !== null) {
-                            alert("Senha incorreta.");
-                          }
-                        }
-                      });
-                    }}
-                    disabled={u.role === 'MASTER'}
-                    className="p-2 bg-rose-100 text-rose-600 rounded-xl disabled:opacity-30 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
               </div>
             );
           })}

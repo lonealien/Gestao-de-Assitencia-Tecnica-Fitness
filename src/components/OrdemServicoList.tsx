@@ -5,7 +5,7 @@ import {
   User, CheckCircle, Ban, MessageSquarePlus, PenTool, Check, MapPin, 
   Sparkles, ShieldAlert, History, Plus, Trash2, FileText, Download, Image as ImageIcon, ExternalLink, Navigation, DollarSign, Camera, X, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { toPng } from 'html-to-image';
+import { toJpeg } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { SignaturePad } from './SignaturePad';
 
@@ -25,7 +25,7 @@ interface OrdemServicoListProps {
   onShowBlockedAlert?: (message: string) => void;
 }
 
-const compressImage = (file: File, maxWidth = 800): Promise<string> => {
+const compressImage = (file: File, maxWidth = 1920): Promise<string> => {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -44,7 +44,7 @@ const compressImage = (file: File, maxWidth = 800): Promise<string> => {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7));
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
       };
       img.src = event.target?.result as string;
     };
@@ -79,7 +79,7 @@ export default function OrdemServicoList({
   } | null>(null);
 
   // Agenda / Visit Date Filters for Technical role
-  const [dateAgendaFilter, setDateAgendaFilter] = useState<'Todos' | 'Hoje' | 'Amanhã' | 'Específica'>('Hoje');
+  const [dateAgendaFilter, setDateAgendaFilter] = useState<'Todos' | 'Hoje' | 'Específica'>('Hoje');
   const [specificDate, setSpecificDate] = useState<string>('');
   const [showTodayCompleted, setShowTodayCompleted] = useState(false);
 
@@ -114,6 +114,7 @@ export default function OrdemServicoList({
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
   const [osToExport, setOsToExport] = useState<OrdemServico | null>(null);
+  const [includePhotosInPdf, setIncludePhotosInPdf] = useState(false);
   const [isExportingImage, setIsExportingImage] = useState(false);
 
   // Helper to get YYYY-MM-DD in local time
@@ -237,7 +238,6 @@ export default function OrdemServicoList({
       if (dateAgendaFilter === 'Todos') return true;
       const scheduledStr = o.scheduledVisitDate ? o.scheduledVisitDate.substring(0, 10) : '';
       if (dateAgendaFilter === 'Hoje') return scheduledStr === todayStr;
-      if (dateAgendaFilter === 'Amanhã') return scheduledStr === tomorrowStr;
       if (dateAgendaFilter === 'Específica' && specificDate) return scheduledStr === (specificDate ? specificDate.substring(0, 10) : '');
       return true;
     })();
@@ -538,17 +538,18 @@ export default function OrdemServicoList({
     try {
       await new Promise((resolve) => setTimeout(resolve, 300));
       
-      const pixelRatio = 2; // High-resolution but memory safe for mobile screens
+      const pixelRatio = 2; // Reduced to 2 for stability and lower memory consumption
       
       // Capture Page 1
       const originalWidth1 = page1Node.offsetWidth || 512;
       const originalHeight1 = page1Node.scrollHeight;
       
-      const dataUrl1 = await toPng(page1Node, {
+      const dataUrl1 = await toJpeg(page1Node, {
         cacheBust: true,
         backgroundColor: '#ffffff',
         width: originalWidth1 * pixelRatio,
         height: originalHeight1 * pixelRatio,
+        quality: 0.85,
         style: {
           transform: `scale(${pixelRatio})`,
           transformOrigin: 'top left',
@@ -565,19 +566,20 @@ export default function OrdemServicoList({
       
       // Page 1 matches A4 width, height calculated based on page element aspect ratio
       const page1PdfHeight = (originalHeight1 * pdfWidth) / originalWidth1;
-      pdf.addImage(dataUrl1, 'PNG', 0, 0, pdfWidth, Math.min(page1PdfHeight, pdfPageHeight));
+      pdf.addImage(dataUrl1, 'JPEG', 0, 0, pdfWidth, Math.min(page1PdfHeight, pdfPageHeight), undefined, 'FAST');
 
       // Capture and append Page 2 if it exists
       const page2Node = document.getElementById('os-receipt-card-page2');
-      if (page2Node) {
+      if (page2Node && includePhotosInPdf) {
         const originalWidth2 = page2Node.offsetWidth || 512;
         const originalHeight2 = page2Node.scrollHeight;
         
-        const dataUrl2 = await toPng(page2Node, {
+        const dataUrl2 = await toJpeg(page2Node, {
           cacheBust: true,
           backgroundColor: '#ffffff',
           width: originalWidth2 * pixelRatio,
           height: originalHeight2 * pixelRatio,
+          quality: 0.85,
           style: {
             transform: `scale(${pixelRatio})`,
             transformOrigin: 'top left',
@@ -590,7 +592,7 @@ export default function OrdemServicoList({
         
         pdf.addPage();
         const page2PdfHeight = (originalHeight2 * pdfWidth) / originalWidth2;
-        pdf.addImage(dataUrl2, 'PNG', 0, 0, pdfWidth, Math.min(page2PdfHeight, pdfPageHeight));
+        pdf.addImage(dataUrl2, 'JPEG', 0, 0, pdfWidth, Math.min(page2PdfHeight, pdfPageHeight), undefined, 'FAST');
       }
       
       pdf.save(`comprovante_OS_${osToExport?.idFormatado || 'os'}.pdf`);
@@ -600,7 +602,7 @@ export default function OrdemServicoList({
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       setIsExportingImage(false);
-      alert('Ocorreu um erro ao exportar o comprovante em PDF. Por favor, tente novamente.');
+      alert('Ocorreu um erro ao exportar o comprovante em PDF: ' + (error instanceof Error ? error.message : 'Falha na renderização da imagem.'));
     }
   };
 
@@ -617,11 +619,12 @@ export default function OrdemServicoList({
       const originalWidth = node.offsetWidth || 512;
       const originalHeight = node.scrollHeight;
       
-      const dataUrl = await toPng(node, {
+      const dataUrl = await toJpeg(node, {
         cacheBust: true,
         backgroundColor: '#f5f5f5', // Neutral-100 placeholder background to space Pages beautifully if stacked
         width: originalWidth,
         height: originalHeight,
+        quality: 0.85,
         style: {
           transform: 'scale(1)',
           transformOrigin: 'top left',
@@ -699,7 +702,7 @@ export default function OrdemServicoList({
             </span>
           </div>
             
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mr-2">Filtrar Atendimentos:</span>
             <button
               onClick={() => setDateAgendaFilter('Hoje')}
@@ -710,34 +713,6 @@ export default function OrdemServicoList({
               Hoje ({scopedOrdens.filter(o => o.scheduledVisitDate === todayStr).length})
             </button>
             <button
-              onClick={() => setDateAgendaFilter('Amanhã')}
-              className={`px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                dateAgendaFilter === 'Amanhã' ? 'bg-amber-300 dark:bg-amber-400 text-neutral-900 shadow-sm dark:shadow-none' : 'bg-white dark:bg-neutral-800 hover:bg-neutral-100 text-neutral-900 dark:text-neutral-100'
-              }`}
-            >
-              Amanhã ({scopedOrdens.filter(o => o.scheduledVisitDate === tomorrowStr).length})
-            </button>
-            
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setDateAgendaFilter('Específica')}
-                className={`px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                  dateAgendaFilter === 'Específica' ? 'bg-amber-300 dark:bg-amber-400 text-neutral-900 shadow-sm dark:shadow-none' : 'bg-white dark:bg-neutral-800 hover:bg-neutral-100 text-neutral-900 dark:text-neutral-100'
-                }`}
-              >
-                Outro Dia...
-              </button>
-              {dateAgendaFilter === 'Específica' && (
-                <input
-                  type="date"
-                  value={specificDate}
-                  onChange={(e) => setSpecificDate(e.target.value)}
-                  className="px-2 py-1 border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 focus:outline-none"
-                />
-              )}
-            </div>
-
-            <button
               onClick={() => setDateAgendaFilter('Todos')}
               className={`px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                 dateAgendaFilter === 'Todos' ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900' : 'bg-white dark:bg-neutral-800 hover:bg-neutral-100 text-neutral-900 dark:text-neutral-100'
@@ -745,11 +720,29 @@ export default function OrdemServicoList({
             >
               Todos ({scopedOrdens.length})
             </button>
+            
+            <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
+              <button
+                onClick={() => setDateAgendaFilter('Específica')}
+                className={`px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  dateAgendaFilter === 'Específica' ? 'bg-amber-300 dark:bg-amber-400 text-neutral-900 shadow-sm dark:shadow-none' : 'bg-white dark:bg-neutral-800 hover:bg-neutral-100 text-neutral-900 dark:text-neutral-100'
+                }`}
+              >
+                Buscar Data
+              </button>
+              {dateAgendaFilter === 'Específica' && (
+                <input
+                  type="date"
+                  value={specificDate}
+                  onChange={(e) => setSpecificDate(e.target.value)}
+                  className="px-2 py-1.5 border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 focus:outline-none rounded-none"
+                />
+              )}
+            </div>
           </div>
           
           <div className="text-[10px] font-black uppercase tracking-widest text-neutral-700">
             {dateAgendaFilter === 'Hoje' && `📅 Visualizando visitas marcadas para hoje: ${new Date().toLocaleDateString('pt-BR')}`}
-            {dateAgendaFilter === 'Amanhã' && `📅 Visualizando visitas marcadas para amanhã: ${new Date(Date.now() + 86450000).toLocaleDateString('pt-BR')}`}
             {dateAgendaFilter === 'Todos' && `📅 Exibindo todas as ordens de serviço ativas atribuídas a você.`}
             {dateAgendaFilter === 'Específica' && specificDate && `📅 Filtrando visitas agendadas para o dia: ${new Date(specificDate + 'T00:00:00').toLocaleDateString('pt-BR')}`}
           </div>
@@ -1083,70 +1076,20 @@ export default function OrdemServicoList({
                     </div>
                   </div>
 
-                  {/* Current Registered Signatures Display */}
-                  {(os.sigTecnicoAbertura || os.sigClienteAbertura) && (
-                    <div className="border border-neutral-200 dark:border-neutral-700 p-4 bg-zinc-50 space-y-3.5">
-                      <h4 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <PenTool className="w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" /> Assinaturas Digitais da OS
-                      </h4>
-                      <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 p-3 space-y-2">
-                        <div className="flex justify-between items-center border-b border-neutral-200 dark:border-neutral-700 pb-1.5">
-                          <span className="text-[9px] font-black uppercase text-neutral-900 dark:text-neutral-100">Visto de Abertura / Início do Chamado</span>
-                          {os.sigAberturaData && (
-                            <span className="text-[8px] font-mono font-bold text-neutral-500">
-                              {new Date(os.sigAberturaData).toLocaleDateString('pt-BR')}
-                            </span>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-center">
-                          <div>
-                            <span className="block text-[7px] font-black text-neutral-400 uppercase tracking-widest mb-1 pointer-events-none">Mecânico</span>
-                            {os.sigTecnicoAbertura ? (
-                              <div className="border border-neutral-200 h-14 bg-zinc-50 flex items-center justify-center p-1 rounded-2xl select-none">
-                                <img src={os.sigTecnicoAbertura} alt="Visto Mecânico" className="max-h-full max-w-full object-contain" />
-                              </div>
-                            ) : (
-                              <span className="block border border-dashed border-neutral-300 h-14 text-[8px] font-bold text-neutral-400 uppercase leading-[54px]">Pendente</span>
-                            )}
-                          </div>
-                          <div>
-                            <span className="block text-[7px] font-black text-neutral-400 uppercase tracking-widest mb-1 pointer-events-none">Cliente Autorizador</span>
-                            {os.sigClienteAbertura ? (
-                              <div className="border border-neutral-200 h-14 bg-zinc-50 flex items-center justify-center p-1 rounded-2xl select-none">
-                                <img src={os.sigClienteAbertura} alt="Visto Cliente" className="max-h-full max-w-full object-contain" />
-                              </div>
-                            ) : (
-                              <span className="block border border-dashed border-neutral-300 h-14 text-[8px] font-bold text-neutral-400 uppercase leading-[54px]">Pendente</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+
 
                   {/* Action Strip */}
                   <div className="bg-neutral-50 border-t-2 border-black -mx-6 -mb-6 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
                     {/* Control Buttons */}
-                    <div className="flex flex-wrap items-center gap-2.5">
+                    <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:grid-cols-none sm:w-auto">
                       <button
                         onClick={() => setExpandedOSId(isHistoryExpanded ? null : os.id)}
-                        className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 text-neutral-900 dark:text-neutral-100 px-3.5 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-colors inline-flex items-center gap-1.5 cursor-pointer placeholder-neutral-500 dark:placeholder-neutral-400 dark:placeholder-neutral-500"
+                        className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 text-neutral-900 dark:text-neutral-100 px-3.5 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-colors inline-flex items-center gap-1.5 cursor-pointer placeholder-neutral-500 dark:placeholder-neutral-400 dark:placeholder-neutral-500 w-full justify-center"
                         title="Ver Histórico de Modificações"
                       >
                         <History className="w-4 h-4 stroke-[2.5]" />
                         {isHistoryExpanded ? 'Fechar Log' : 'Linha Tempo'}
                       </button>
-
-                      {(currentRole === 'ADMIN' || currentRole === 'ASSISTENCIA_GERENTE' || currentRole === 'ATENDENTE' || currentRole === 'MASTER') && (
-                        <button
-                          onClick={() => setOsToExport(os)}
-                          className="bg-amber-300 hover:bg-amber-400 text-neutral-900 dark:text-neutral-100 px-3.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-xs font-black uppercase tracking-wider transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm dark:shadow-none hover:shadow-md"
-                          title="Exportar OS para Cliente"
-                        >
-                          <FileText className="w-4 h-4 stroke-[2.5]" />
-                          Exportar OS
-                        </button>
-                      )}
 
                       {/* Update Action button */}
                       {!isEditingThisOS && (
@@ -1190,10 +1133,21 @@ export default function OrdemServicoList({
                             }
                             setEditFotos(allFotos);
                           }}
-                          className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 text-white dark:text-neutral-900 px-4 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm dark:shadow-none hover:shadow-md transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                          className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 text-white dark:text-neutral-900 px-3.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm dark:shadow-none hover:shadow-md transition-all inline-flex items-center gap-1.5 cursor-pointer w-full justify-center"
                         >
                           <Hammer className="w-4 h-4 stroke-[2.5]" />
                           Editar OS
+                        </button>
+                      )}
+
+                      {(currentRole === 'ADMIN' || currentRole === 'ASSISTENCIA_GERENTE' || currentRole === 'ATENDENTE' || currentRole === 'MASTER') && (
+                        <button
+                          onClick={() => setOsToExport(os)}
+                          className="bg-amber-300 hover:bg-amber-400 text-neutral-900 dark:text-neutral-100 px-3.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-xs font-black uppercase tracking-wider transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm dark:shadow-none hover:shadow-md w-full justify-center"
+                          title="Exportar OS para Cliente"
+                        >
+                          <FileText className="w-4 h-4 stroke-[2.5]" />
+                          Exportar
                         </button>
                       )}
 
@@ -1218,7 +1172,7 @@ export default function OrdemServicoList({
                               }
                             });
                           }}
-                          className="bg-red-400 dark:bg-red-900/80 hover:bg-red-500 text-neutral-900 dark:text-neutral-100 px-3.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-xs font-black uppercase tracking-wider hover:text-white dark:text-neutral-900 transition-all cursor-pointer"
+                          className="bg-red-400 dark:bg-red-900/80 hover:bg-red-500 text-neutral-900 dark:text-neutral-100 px-3.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-xs font-black uppercase tracking-wider hover:text-white dark:text-neutral-900 transition-all cursor-pointer w-full justify-center"
                         >
                           Excluir
                         </button>
@@ -1625,7 +1579,6 @@ export default function OrdemServicoList({
                                      <span className="text-xl font-medium font-serif italic text-neutral-700 dark:text-neutral-300">
                                        {activeUserName}
                                      </span>
-                                     <span className="text-[8px] font-bold text-emerald-600 uppercase bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Visto Automático</span>
                                   </div>
                                   
                                   <SignaturePad
@@ -1682,11 +1635,11 @@ export default function OrdemServicoList({
 
     {/* EXPORT OVERLAY VIEW MODAL */}
     {osToExport && (
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-        <div className="bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 w-full max-w-5xl shadow-sm dark:shadow-none rounded-2xl overflow-hidden my-8 animate-fadeIn">
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+        <div className="bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 w-full max-w-5xl shadow-sm dark:shadow-none rounded-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh] my-4 sm:my-8 animate-fadeIn">
           
           {/* Modal Header */}
-          <div className="bg-neutral-900 dark:bg-neutral-100 border-b-4 border-black p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="bg-neutral-900 dark:bg-neutral-100 border-b-4 border-black p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 rounded-t-2xl">
             <span className="text-sm font-black text-white dark:text-neutral-900 uppercase tracking-wider flex items-center gap-2">
               <ImageIcon className="text-yellow-300 w-5 h-5 stroke-[2.5]" />
               Exportar Comprovante do Cliente
@@ -1700,13 +1653,26 @@ export default function OrdemServicoList({
           </div>
 
           {/* Document container wrapper with horizontal and vertical scrollbars */}
-          <div className="p-4 bg-neutral-100 max-h-[75vh] overflow-y-auto overflow-x-auto border-b border-neutral-200 dark:border-neutral-700 flex flex-col items-center">
-            {/* The real node to snapshot, optimized for A4 proportions */}
-            <div 
-              id="os-receipt-card" 
-              className="flex flex-col gap-6 bg-transparent"
-              style={{ width: '210mm' }}
-            >
+          <div className="p-4 bg-neutral-100 overflow-auto border-b border-neutral-200 dark:border-neutral-700 flex-1 relative -webkit-overflow-scrolling-touch">
+            {/* 
+                We use transform-origin-top-left and scale to fit it aesthetically on screen, 
+                but html-to-image is configured to override this transform during capture! 
+            */}
+            <style dangerouslySetInnerHTML={{ __html: `
+              @media (max-width: 640px) {
+                #os-receipt-wrapper { transform: scale(0.45); transform-origin: top center; margin-bottom: -55%; }
+              }
+              @media (min-width: 641px) and (max-width: 1024px) {
+                #os-receipt-wrapper { transform: scale(0.7); transform-origin: top center; margin-bottom: -30%; }
+              }
+            `}} />
+            <div id="os-receipt-wrapper" className="flex flex-col items-center">
+              {/* The real node to snapshot, optimized for A4 proportions */}
+              <div 
+                id="os-receipt-card" 
+                className="flex flex-col gap-6 bg-transparent"
+                style={{ width: '210mm' }}
+              >
               {/* PAGE 1: Core OS Document */}
               <div 
                 id="os-receipt-card-page1"
@@ -1978,7 +1944,6 @@ export default function OrdemServicoList({
                               return tecUser ? tecUser.name : 'Visto Eletrônico';
                             })()}
                           </span>
-                          <span className="text-[5px] text-emerald-600 font-bold uppercase absolute bottom-0.5">Visto Automático</span>
                         </>
                       )}
                     </div>
@@ -2045,7 +2010,7 @@ export default function OrdemServicoList({
                         <div className="flex flex-wrap gap-3">
                           {osToExport.fotos.map((photo, index) => (
                             <div key={`foto-${index}`} className="flex flex-col items-center bg-neutral-50 p-2 border border-neutral-200 rounded-lg shadow-sm">
-                              <img src={photo.url} alt={`Foto ${index + 1}`} className="max-h-[160px] object-contain rounded" referrerPolicy="no-referrer" />
+                              <img src={photo.url} alt={`Foto ${index + 1}`} className="max-h-[240px] max-w-[300px] object-contain rounded" referrerPolicy="no-referrer" />
                               <span className="text-[7px] font-bold text-neutral-600 uppercase mt-2 max-w-[150px] text-center truncate">{photo.description || `Foto ${index + 1}`}</span>
                             </div>
                           ))}
@@ -2061,7 +2026,7 @@ export default function OrdemServicoList({
                         <div className="flex flex-wrap gap-3">
                           {osToExport.fotosAntes.map((photo, index) => (
                             <div key={`antes-${index}`} className="flex flex-col items-center bg-neutral-50 p-2 border border-neutral-200 rounded-lg shadow-sm">
-                              <img src={photo} alt={`Antes ${index + 1}`} className="max-h-[160px] object-contain rounded" referrerPolicy="no-referrer" />
+                              <img src={photo} alt={`Antes ${index + 1}`} className="max-h-[240px] max-w-[300px] object-contain rounded" referrerPolicy="no-referrer" />
                               <span className="text-[7px] font-bold text-neutral-500 uppercase mt-1">Antes {index + 1}</span>
                             </div>
                           ))}
@@ -2077,7 +2042,7 @@ export default function OrdemServicoList({
                         <div className="flex flex-wrap gap-3">
                           {osToExport.fotosDepois.map((photo, index) => (
                             <div key={`depois-${index}`} className="flex flex-col items-center bg-neutral-50 p-2 border border-neutral-200 rounded-lg shadow-sm">
-                              <img src={photo} alt={`Depois ${index + 1}`} className="max-h-[160px] object-contain rounded" referrerPolicy="no-referrer" />
+                              <img src={photo} alt={`Depois ${index + 1}`} className="max-h-[240px] max-w-[300px] object-contain rounded" referrerPolicy="no-referrer" />
                               <span className="text-[7px] font-bold text-neutral-500 uppercase mt-1">Depois {index + 1}</span>
                             </div>
                           ))}
@@ -2094,25 +2059,43 @@ export default function OrdemServicoList({
                 </div>
               </div>
             )}
+            </div>
           </div>
-          </div>
+        </div>
 
           {/* Modal Footer Controls */}
-          <div className="bg-neutral-50 dark:bg-neutral-900 px-6 py-4 flex flex-col sm:flex-row justify-end gap-3 border-t border-neutral-200 dark:border-neutral-700">
-            <button
-              onClick={() => setOsToExport(null)}
-              className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 px-4 py-2 text-xs font-black uppercase tracking-wider hover:bg-neutral-100 cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              disabled={isExportingImage}
-              onClick={handleDownloadPdf}
-              className="bg-amber-300 hover:bg-amber-400 disabled:bg-amber-200 text-neutral-900 px-5 py-2 border border-black rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <FileText className="w-4 h-4 stroke-[2.5]" />
-              {isExportingImage ? 'Gerando...' : 'GERAR PDF'}
-            </button>
+          <div className="bg-neutral-50 dark:bg-neutral-900 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-3 border-t border-neutral-200 dark:border-neutral-700 shrink-0 rounded-b-2xl">
+            <div className="flex items-center gap-2">
+               {((osToExport.fotos && osToExport.fotos.length > 0) || (osToExport.fotosAntes && osToExport.fotosAntes.length > 0) || (osToExport.fotosDepois && osToExport.fotosDepois.length > 0)) && (
+                 <label className="flex items-center gap-2 cursor-pointer">
+                   <input
+                     type="checkbox"
+                     checked={includePhotosInPdf}
+                     onChange={(e) => setIncludePhotosInPdf(e.target.checked)}
+                     className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                   />
+                   <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-widest">
+                     Incluir Anexo de Fotos no PDF
+                   </span>
+                 </label>
+               )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-3 w-full sm:w-auto">
+              <button
+                onClick={() => setOsToExport(null)}
+                className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 px-4 py-2 text-xs font-black uppercase tracking-wider hover:bg-neutral-100 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={isExportingImage}
+                onClick={handleDownloadPdf}
+                className="bg-amber-300 hover:bg-amber-400 disabled:bg-amber-200 text-neutral-900 px-5 py-2 border border-black rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 w-full sm:w-auto"
+              >
+                <FileText className="w-4 h-4 stroke-[2.5]" />
+                {isExportingImage ? 'Gerando...' : 'GERAR PDF'}
+              </button>
+            </div>
           </div>
 
         </div>
