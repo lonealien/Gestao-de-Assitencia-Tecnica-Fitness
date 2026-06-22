@@ -70,6 +70,8 @@ export default function OrdemServicoList({
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('Todos');
   const [selectedOSId, setSelectedOSId] = useState<string | null>(null);
+  const [quickAssignOSId, setQuickAssignOSId] = useState<string | null>(null);
+  const [quickTecId, setQuickTecId] = useState<string>('');
   const [deleteConfirm, setDeleteConfirm] = useState<{
     title: string;
     message: string;
@@ -453,7 +455,7 @@ export default function OrdemServicoList({
     updatedOS.fotosAntes = editFotosAntes;
     updatedOS.fotosDepois = editFotosDepois;
     updatedOS.history = [...updatedOS.history, ...historyEntries];
-
+    
     onUpdateOS(updatedOS);
     setSelectedOSId(null);
 
@@ -480,6 +482,36 @@ export default function OrdemServicoList({
     setSigClienteFinalInput('');
     setSigAberturaDataInput('');
     setSigFinalDataInput('');
+  };
+
+  const handleQuickAssign = (os: OrdemServico, tecId: string) => {
+    if (isReadOnly) {
+       onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+       return;
+    }
+    
+    if (!tecId) return;
+
+    const selectedTec = usuarios.find(u => u.tecnicoId === tecId || u.id === tecId);
+    const dateFormatted = new Date().toISOString();
+    
+    const updatedOS = { 
+      ...os,
+      tecnicoId: tecId,
+      history: [
+        ...os.history,
+        {
+          date: dateFormatted,
+          status: os.status,
+          description: `Técnico ESCALADO RAPIDAMENTE para: ${selectedTec ? selectedTec.name : tecId}`,
+          author: activeUserName
+        }
+      ]
+    };
+
+    onUpdateOS(updatedOS);
+    setQuickAssignOSId(null);
+    setQuickTecId('');
   };
 
    const handleDownloadPdf = async () => {
@@ -940,9 +972,60 @@ export default function OrdemServicoList({
                       <div className="pt-3.5 border-t-2 border-neutral-100 flex items-center justify-between gap-3">
                         <div>
                            <span className="text-[9px] text-neutral-400 block uppercase font-black tracking-widest">Mecânico Escalado</span>
-                           <span className={`text-xs font-black block truncate mt-0.5 uppercase tracking-tight ${correspondingTec ? 'text-neutral-900 dark:text-neutral-100' : 'text-amber-500 italic'}`}>
-                             {correspondingTec ? correspondingTec.name : 'Pendente de Escala'}
-                           </span>
+                           
+                           {quickAssignOSId === os.id ? (
+                             <div className="flex items-center gap-2 mt-1">
+                               <select
+                                 value={quickTecId}
+                                 onChange={(e) => setQuickTecId(e.target.value)}
+                                 className="text-xs font-bold border border-neutral-300 dark:border-neutral-600 rounded bg-white dark:bg-neutral-800 px-2 py-1 outline-none"
+                               >
+                                 <option value="">Escolher Técnico</option>
+                                 {usuarios
+                                   .filter(u => u.role === 'TECNICO')
+                                   .map(u => (
+                                     <option key={u.id} value={u.tecnicoId || u.id}>{u.name}</option>
+                                   ))}
+                               </select>
+                               <button
+                                 onClick={() => handleQuickAssign(os, quickTecId)}
+                                 className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wider cursor-pointer"
+                               >
+                                 Salvar
+                               </button>
+                               <button
+                                 onClick={() => {
+                                   setQuickAssignOSId(null);
+                                   setQuickTecId('');
+                                 }}
+                                 className="text-[10px] font-black uppercase tracking-wider text-neutral-400 hover:text-neutral-600 cursor-pointer"
+                               >
+                                 Sair
+                               </button>
+                             </div>
+                           ) : (
+                             <div className="flex items-center gap-3">
+                               <span className={`text-xs font-black block truncate mt-0.5 uppercase tracking-tight ${correspondingTec ? 'text-neutral-900 dark:text-neutral-100' : 'text-amber-500 italic'}`}>
+                                 {correspondingTec ? correspondingTec.name : 'Pendente de Escala'}
+                               </span>
+                               
+                               {(currentRole === 'ADMIN' || currentRole === 'ASSISTENCIA_GERENTE' || currentRole === 'ATENDENTE' || currentRole === 'MASTER') && (
+                                  <button
+                                    onClick={() => {
+                                      if (isReadOnly) {
+                                        onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                        return;
+                                      }
+                                      setQuickAssignOSId(os.id);
+                                      setQuickTecId(os.tecnicoId || '');
+                                    }}
+                                    className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-neutral-200 dark:border-neutral-700 transition-all cursor-pointer ${isReadOnly ? 'opacity-50 grayscale cursor-not-allowed' : 'bg-white dark:bg-neutral-800 hover:bg-neutral-900 hover:text-white dark:hover:bg-neutral-100 dark:hover:text-neutral-900'}`}
+                                  >
+                                    Escalar Técnico
+                                  </button>
+                               )}
+                             </div>
+                           )}
                         </div>
                       </div>
                     </div>
