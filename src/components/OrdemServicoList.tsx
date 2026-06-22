@@ -81,6 +81,7 @@ export default function OrdemServicoList({
   // Agenda / Visit Date Filters for Technical role
   const [dateAgendaFilter, setDateAgendaFilter] = useState<'Todos' | 'Hoje' | 'Amanhã' | 'Específica'>('Hoje');
   const [specificDate, setSpecificDate] = useState<string>('');
+  const [showTodayCompleted, setShowTodayCompleted] = useState(false);
 
   // For adding history/updates
   const [newStatus, setNewStatus] = useState<OSStatus | ''>('');
@@ -199,10 +200,18 @@ export default function OrdemServicoList({
   if (currentRole === 'ASSISTENCIA_GERENTE' && activeRoleEntityId) {
     scopedOrdens = ordens.filter(o => o.assistenciaId === activeRoleEntityId);
   } else if (currentRole === 'TECNICO' && activeRoleEntityId) {
-    scopedOrdens = ordens.filter(o => 
-      o.tecnicoId === activeRoleEntityId && 
-      o.status !== 'Finalizada'
-    );
+    if (showTodayCompleted) {
+      scopedOrdens = ordens.filter(o => 
+        o.tecnicoId === activeRoleEntityId && 
+        o.status === 'Finalizada' &&
+        o.completionDate === todayStr
+      );
+    } else {
+      scopedOrdens = ordens.filter(o => 
+        o.tecnicoId === activeRoleEntityId && 
+        o.status !== 'Finalizada'
+      );
+    }
   }
 
   // 2. Filter based on Search and Filter Dropdowns
@@ -633,14 +642,42 @@ export default function OrdemServicoList({
 
       {/* Agenda Quick Navigation or Technician Info Banner */}
       {currentRole === 'TECNICO' ? (
-        <div className="bg-emerald-50 dark:bg-neutral-800/60 border-2 border-emerald-500/30 p-5 shadow-sm rounded-2xl flex items-center gap-4">
-          <span className="text-3xl shrink-0 select-none">🛠️</span>
-          <div>
-            <h4 className="text-sm font-black uppercase text-neutral-900 dark:text-neutral-100 tracking-wider">Suas Atribuições de Hoje</h4>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold uppercase mt-1 leading-snug">
-              Exibindo apenas ordens de serviço agendadas para <span className="text-emerald-600 dark:text-emerald-400">hoje ({new Date().toLocaleDateString('pt-BR')})</span> com o status <span className="text-rose-600 dark:text-rose-400">Pendente</span> para atendimento.
-            </p>
+        <div className="bg-emerald-50 dark:bg-neutral-800/60 border-2 border-emerald-500/30 p-5 shadow-sm rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="text-3xl shrink-0 select-none">🛠️</span>
+            <div>
+              <h4 className="text-sm font-black uppercase text-neutral-900 dark:text-neutral-100 tracking-wider">
+                {showTodayCompleted ? 'Ordens Finalizadas Hoje' : 'Suas Atribuições de Hoje'}
+              </h4>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold uppercase mt-1 leading-snug">
+                {showTodayCompleted 
+                  ? `Exibindo ordens que você finalizou hoje (${new Date().toLocaleDateString('pt-BR')}).`
+                  : `Exibindo ordens pendentes ou agendadas para hoje (${new Date().toLocaleDateString('pt-BR')}).`
+                }
+              </p>
+            </div>
           </div>
+          
+          <button
+            onClick={() => setShowTodayCompleted(!showTodayCompleted)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none border-2 border-black ${
+              showTodayCompleted 
+                ? 'bg-neutral-900 text-white' 
+                : 'bg-emerald-400 text-neutral-900 hover:bg-emerald-500'
+            }`}
+          >
+            {showTodayCompleted ? (
+              <>
+                <Hammer className="w-4 h-4" />
+                Ver Pendentes
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                Ver Concluídas de Hoje
+              </>
+            )}
+          </button>
         </div>
       ) : (
         <div className="bg-neutral-100 dark:bg-neutral-800/40 border-2 border-neutral-200 dark:border-neutral-700 p-5 shadow-sm dark:shadow-none space-y-3 rounded-2xl">
@@ -1272,25 +1309,16 @@ export default function OrdemServicoList({
                             )}
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                          <div className="grid grid-cols-1 gap-3.5">
                             <div>
-                              <label htmlFor={`edit-visit-${os.id}`} className="block text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-1.5">Data de Atendimento</label>
+                              <label htmlFor={`edit-visit-${os.id}`} className="block text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-1.5">Data de Atendimento (Início)</label>
                               <input
                                 id={`edit-visit-${os.id}`}
                                 type="date"
                                 value={editScheduledVisitDate}
                                 onChange={(e) => setEditScheduledVisitDate(e.target.value)}
-                                className="w-full border border-neutral-200 dark:border-neutral-700 rounded-2xl p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 focus:outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label htmlFor={`edit-completion-${os.id}`} className="block text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-1.5">Data de Finalização</label>
-                              <input
-                                id={`edit-completion-${os.id}`}
-                                type="date"
-                                value={editCompletionDate}
-                                onChange={(e) => setEditCompletionDate(e.target.value)}
-                                className="w-full border border-neutral-200 dark:border-neutral-700 rounded-2xl p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 focus:outline-none"
+                                disabled={currentRole === 'TECNICO'}
+                                className={`w-full border border-neutral-200 dark:border-neutral-700 rounded-2xl p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 focus:outline-none ${currentRole === 'TECNICO' ? 'opacity-70 bg-neutral-100 cursor-not-allowed' : ''}`}
                               />
                             </div>
                           </div>
@@ -1567,23 +1595,10 @@ export default function OrdemServicoList({
                                 Datas de Agendamento e Finalização
                               </span>
                               
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                  <label htmlFor={`edit-visit-date-${os.id}`} className="block text-[11px] font-black uppercase text-neutral-700 mb-1">
-                                    Data de Visita Agendada
-                                  </label>
-                                  <input
-                                    id={`edit-visit-date-${os.id}`}
-                                    type="date"
-                                    value={editScheduledVisitDate}
-                                    onChange={(e) => setEditScheduledVisitDate(e.target.value)}
-                                    className="w-full border border-neutral-200 dark:border-neutral-700 p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none"
-                                  />
-                                </div>
-
+                              <div className="grid grid-cols-1 gap-4">
                                 <div>
                                   <label htmlFor={`edit-comp-date-${os.id}`} className="block text-[11px] font-black uppercase text-neutral-700 mb-1">
-                                    Data de Conclusão / Baixa
+                                    Data de Conclusão / Finalização OS
                                   </label>
                                   <input
                                     id={`edit-comp-date-${os.id}`}
