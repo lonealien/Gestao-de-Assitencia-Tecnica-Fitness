@@ -101,6 +101,78 @@ export default function MasterDashboard({
   const [newAdminPasswordState, setNewAdminPasswordState] = useState('');
   const [newAdminAssistenciaId, setNewAdminAssistenciaId] = useState('');
 
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [migrationProgress, setMigrationProgress] = useState('');
+
+  const executeOldDatabaseMigration = async () => {
+    setMigrationStatus('loading');
+    setMigrationProgress('Inicializando conexão com o banco anterior...');
+
+    try {
+      const { initializeApp, deleteApp } = await import('firebase/app');
+      const { initializeFirestore, collection, getDocs, doc, setDoc, terminate } = await import('firebase/firestore');
+      const { db: dbTarget } = await import('../firebase');
+
+      const firebaseConfigOld = {
+        apiKey: "AIzaSyCa_PdxFwIMOGOOvY1wngWn5m7wydXNA5A",
+        authDomain: "woven-bivouac-kk7s0.firebaseapp.com",
+        projectId: "woven-bivouac-kk7s0",
+        storageBucket: "woven-bivouac-kk7s0.firebasestorage.app",
+        messagingSenderId: "964126565029",
+        appId: "1:964126565029:web:c72a40a947e1a7d729e34c",
+        databaseId: "ai-studio-7ad3c002-2b58-4d4f-b9ea-8955bae2e53a"
+      };
+
+      const appSource = initializeApp(firebaseConfigOld, "migration-source-browser-" + Date.now());
+      const dbSource = initializeFirestore(appSource, { ignoreUndefinedProperties: true }, firebaseConfigOld.databaseId);
+
+      const collectionsToMigrate = ['usuarios', 'assistencias', 'tecnicos', 'ordens', 'settings'];
+
+      for (const colName of collectionsToMigrate) {
+        setMigrationProgress(`Lendo coleção "${colName}"...`);
+        const snapshot = await getDocs(collection(dbSource, colName));
+        setMigrationProgress(`Importando "${colName}" (${snapshot.size} documentos)...`);
+        
+        let count = 0;
+        for (const sDoc of snapshot.docs) {
+          const data = sDoc.data();
+          await setDoc(doc(dbTarget, colName, sDoc.id), data);
+          count++;
+          setMigrationProgress(`Salvando "${colName}": ${count}/${snapshot.size} concluídos`);
+        }
+      }
+
+      setMigrationProgress('Concluindo conexões...');
+      await terminate(dbSource);
+      await deleteApp(appSource);
+
+      setMigrationStatus('success');
+      setMigrationProgress('Migração de dados completada com sucesso!');
+      triggerSuccessMsg("Sucesso! Todos os dados das assistências, ordens de serviço, técnicos, configurações e usuários foram copiados com sucesso.");
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
+    } catch (err: any) {
+      console.error(err);
+      setMigrationStatus('error');
+      setMigrationProgress(`Falha na migração: ${err?.message || err}`);
+      triggerErrorMsg(`Falha na migração: ${err?.message || err}`);
+    }
+  };
+
+  const handleMigrateOldDatabase = () => {
+    setDeleteConfirm({
+      title: "🔄 IMPORTAR DADOS DO BANCO ANTERIOR",
+      message: "Isso importará as informações completas (usuários, assistências, técnicos, ordens de serviço e configurações) do banco de dados anterior para o novo banco ativo.\n\nTodos os registros antigos serão copiados ou atualizados neste banco.\n\nDeseja realmente iniciar a migração de dados através do navegador?",
+      onConfirm: async () => {
+        setDeleteConfirm(null);
+        await executeOldDatabaseMigration();
+      },
+      isDanger: false
+    });
+  };
+
   // Master Profile Edit States
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [configName, setConfigName] = useState('');
@@ -613,6 +685,20 @@ export default function MasterDashboard({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <h3 className="text-xl font-black uppercase text-neutral-900 dark:text-neutral-100">Painel de Empresas Parceiras</h3>
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleMigrateOldDatabase}
+                  disabled={migrationStatus === 'loading'}
+                  className={`text-xs font-black uppercase tracking-widest px-5 py-3 border-2 rounded-2xl transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
+                    migrationStatus === 'loading'
+                      ? 'bg-amber-600/70 border-amber-500 text-white cursor-not-allowed animate-pulse'
+                      : 'bg-amber-600 border-amber-750 text-white hover:bg-amber-700 hover:shadow-md'
+                  }`}
+                >
+                  <Upload className="w-4 h-4" />
+                  {migrationStatus === 'loading' ? 'Migrando Banco...' : 'Migrar Dados do Banco Anterior'}
+                </button>
+
                 {onPurgeDatabase && (
                   <button
                     type="button"
@@ -642,6 +728,15 @@ export default function MasterDashboard({
                 </button>
               </div>
             </div>
+
+            {migrationProgress && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 p-4 rounded-2xl text-xs font-mono leading-relaxed shadow-sm">
+                <p className="font-bold flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-ping"></span>
+                  Migração em Andamento: {migrationProgress}
+                </p>
+              </div>
+            )}
 
             {/* Cadastro inline accordion */}
             {showAddForm && (
