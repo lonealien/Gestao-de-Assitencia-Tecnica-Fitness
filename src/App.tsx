@@ -216,6 +216,27 @@ export default function App() {
     }
   }, [isDarkMode]);
 
+  // Online Presence tracking
+  useEffect(() => {
+    if (!loggedUser || loggedUser.role === 'MASTER') return;
+
+    const updatePresence = async () => {
+      try {
+        await saveToFirestore('usuarios', { 
+          ...loggedUser, 
+          lastSeen: Date.now() 
+        });
+      } catch (e) {
+        console.error('Failed to update presence', e);
+      }
+    };
+
+    updatePresence();
+    const interval = setInterval(updatePresence, 120000); // 2 minutes
+
+    return () => clearInterval(interval);
+  }, [loggedUser]);
+
   // Combine firestore users and manual users, ensuring unique entries by username/email
   const allCombinedUsers = (() => {
     const map = new Map<string, AppUser>();
