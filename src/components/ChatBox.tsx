@@ -235,8 +235,19 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
               >
                 {showUserList ? <ChevronLeft size={18} /> : <Users size={18} />}
               </button>
-              <h2 className="font-bold text-neutral-900 dark:text-white text-sm">
-                {showUserList ? 'Chat Com...' : (recipient === 'GERAL' ? 'Chat Geral' : recipient.name)}
+              <h2 className="font-bold text-neutral-900 dark:text-white text-sm flex items-center gap-1">
+                {showUserList ? 'Chat Com...' : (
+                  recipient === 'GERAL' ? (
+                    <>
+                      Chat Geral
+                      {notification && (
+                        <span className="text-[10px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full animate-pulse ml-1">
+                          +1 {notification.senderName}
+                        </span>
+                      )}
+                    </>
+                  ) : recipient.name
+                )}
               </h2>
             </div>
             <button onClick={() => setIsOpen(false)} className="text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300">
