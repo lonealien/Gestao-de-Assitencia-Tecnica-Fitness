@@ -96,7 +96,12 @@ export function loadTecnicos(): Tecnico[] {
     localStorage.setItem('tecnicos_fitness_v2', JSON.stringify(INITIAL_TECNICOS));
     return INITIAL_TECNICOS;
   }
-  return JSON.parse(data);
+  try {
+    return JSON.parse(data);
+  } catch (e) {
+    console.error('Falha ao ler tecnicos', e);
+    return INITIAL_TECNICOS;
+  }
 }
 
 export function saveTecnicos(data: Tecnico[]) {
@@ -109,7 +114,12 @@ export function loadOrdens(): OrdemServico[] {
     localStorage.setItem('ordens_fitness_v2', JSON.stringify(INITIAL_OS));
     return INITIAL_OS;
   }
-  return JSON.parse(data);
+  try {
+    return JSON.parse(data);
+  } catch (e) {
+    console.error('Falha ao ler ordens do localStorage', e);
+    return INITIAL_OS;
+  }
 }
 
 export function saveOrdens(data: OrdemServico[]) {

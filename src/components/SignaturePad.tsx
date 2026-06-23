@@ -166,7 +166,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
           {label} {requiredRoleName && <span className="text-[8px] bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-1 ml-1 font-bold">{requiredRoleName}</span>}
         </span>
         {tempSignature && (
-          <span className="text-[8px] font-black bg-emerald-150 text-emerald-800 px-1.5 py-0.5 border border-emerald-400 font-mono uppercase">
+          <span className="text-[8px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.5 border border-emerald-400 font-mono uppercase">
             REGISTRADO
           </span>
         )}

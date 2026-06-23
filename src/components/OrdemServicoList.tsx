@@ -598,6 +598,14 @@ export default function OrdemServicoList({
         width: originalWidth1 * pixelRatio,
         height: originalHeight1 * pixelRatio,
         quality: 0.85,
+        styleSheetFilter: (css: CSSStyleSheet) => {
+          try {
+            const rules = css.cssRules;
+            return !!rules;
+          } catch (e) {
+            return false;
+          }
+        },
         style: {
           transform: `scale(${pixelRatio})`,
           transformOrigin: 'top left',
@@ -606,7 +614,7 @@ export default function OrdemServicoList({
           maxHeight: 'none',
           overflow: 'visible',
         }
-      });
+      } as any);
       
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
@@ -628,6 +636,14 @@ export default function OrdemServicoList({
           width: originalWidth2 * pixelRatio,
           height: originalHeight2 * pixelRatio,
           quality: 0.85,
+          styleSheetFilter: (css: CSSStyleSheet) => {
+            try {
+              const rules = css.cssRules;
+              return !!rules;
+            } catch (e) {
+              return false;
+            }
+          },
           style: {
             transform: `scale(${pixelRatio})`,
             transformOrigin: 'top left',
@@ -636,7 +652,7 @@ export default function OrdemServicoList({
             maxHeight: 'none',
             overflow: 'visible',
           }
-        });
+        } as any);
         
         pdf.addPage();
         const page2PdfHeight = (originalHeight2 * pdfWidth) / originalWidth2;
@@ -673,6 +689,14 @@ export default function OrdemServicoList({
         width: originalWidth,
         height: originalHeight,
         quality: 0.85,
+        styleSheetFilter: (css: CSSStyleSheet) => {
+          try {
+            const rules = css.cssRules;
+            return !!rules;
+          } catch (e) {
+            return false;
+          }
+        },
         style: {
           transform: 'scale(1)',
           transformOrigin: 'top left',
@@ -681,7 +705,7 @@ export default function OrdemServicoList({
           maxHeight: 'none',
           overflow: 'visible',
         }
-      });
+      } as any);
       
       const link = document.createElement('a');
       link.download = `comprovante_OS_${osToExport?.idFormatado || 'os'}.png`;
@@ -812,7 +836,7 @@ export default function OrdemServicoList({
                   placeholder="Busque por OS, cliente, defeito, marca..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 text-sm font-bold focus:outline-none focus:bg-neutral-50 dark:focus:bg-neutral-750 placeholder-neutral-400 dark:placeholder-neutral-500"
+                  className="w-full pl-9 pr-4 py-2.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 text-sm font-bold focus:outline-none focus:bg-neutral-50 dark:focus:bg-neutral-800 placeholder-neutral-400 dark:placeholder-neutral-500"
                 />
               </div>
             </div>
@@ -1564,7 +1588,7 @@ export default function OrdemServicoList({
                                             const shiftTax = os.taxaDeslocamento || 0;
                                             setCostInput(partsSum + labor + shiftTax);
                                           }}
-                                          className="text-red-600 hover:bg-neutral-150 p-1 border border-neutral-200 dark:border-neutral-700 transition-colors"
+                                          className="text-red-600 hover:bg-neutral-100 p-1 border border-neutral-200 dark:border-neutral-700 transition-colors"
                                           title="Remover Peça"
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
@@ -2004,7 +2028,7 @@ export default function OrdemServicoList({
                           style={{ width: '130px', height: '36px', objectFit: 'contain', display: 'block' }} 
                         />
                       ) : (
-                        <span className="text-[5px] text-zinc-350 italic uppercase absolute bottom-0.5">Sem assinatura digital</span>
+                        <span className="text-[5px] text-zinc-400 italic uppercase absolute bottom-0.5">Sem assinatura digital</span>
                       )}
                     </div>
                     <span className="block text-[6.5px] font-black text-neutral-700 uppercase tracking-widest mt-1">Assinatura do Cliente / Recebedor</span>
@@ -2160,7 +2184,7 @@ export default function OrdemServicoList({
             <button
               type="button"
               onClick={() => setDeleteConfirm(null)}
-              className="bg-neutral-150 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-300 px-4 py-2 text-xs font-bold uppercase rounded-xl cursor-pointer"
+              className="bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-300 px-4 py-2 text-xs font-bold uppercase rounded-xl cursor-pointer"
             >
               Cancelar
             </button>

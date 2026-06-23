@@ -692,7 +692,7 @@ export default function MasterDashboard({
                   className={`text-xs font-black uppercase tracking-widest px-5 py-3 border-2 rounded-2xl transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
                     migrationStatus === 'loading'
                       ? 'bg-amber-600/70 border-amber-500 text-white cursor-not-allowed animate-pulse'
-                      : 'bg-amber-600 border-amber-750 text-white hover:bg-amber-700 hover:shadow-md'
+                      : 'bg-amber-600 border-amber-700 text-white hover:bg-amber-700 hover:shadow-md'
                   }`}
                 >
                   <Upload className="w-4 h-4" />
@@ -858,13 +858,13 @@ export default function MasterDashboard({
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}
-                    className="bg-white dark:bg-neutral-900 border border-neutral-350 hover:bg-neutral-100 p-3 font-bold uppercase cursor-pointer"
+                    className="bg-white dark:bg-neutral-900 border border-neutral-300 hover:bg-neutral-100 p-3 font-bold uppercase cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 p-3 font-black uppercase tracking-widest hover:bg-neutral-850 cursor-pointer rounded-xl flex items-center gap-2"
+                    className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 p-3 font-black uppercase tracking-widest hover:bg-neutral-800 cursor-pointer rounded-xl flex items-center gap-2"
                   >
                     <Check className="w-4 h-4 stroke-[3]" /> Concluir & Cadastrar Empresa
                   </button>
@@ -905,7 +905,7 @@ export default function MasterDashboard({
                                   <ChevronRight className="w-4 h-4" />
                                 )}
                               </span>
-                              {isBlockedVal && <span className="bg-rose-150 text-rose-700 text-[8px] font-black uppercase px-2 py-0.5 tracking-widest rounded">BLOQUEADA DE ACESSO</span>}
+                              {isBlockedVal && <span className="bg-rose-100 text-rose-700 text-[8px] font-black uppercase px-2 py-0.5 tracking-widest rounded">BLOQUEADA DE ACESSO</span>}
                             </h4>
                             <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wide">
                               ID: {ast.id}
@@ -987,7 +987,7 @@ export default function MasterDashboard({
                             <div className="flex gap-2 justify-end items-center flex-wrap w-full sm:w-auto pt-2 lg:pt-0">
                               <button
                                 onClick={() => handleToggleAssistencia(ast)}
-                                className={`p-2.5 rounded-xl border transition-all cursor-pointer ${isBlockedVal ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-250' : 'bg-rose-100 text-rose-600 border-rose-200 hover:bg-rose-250'}`}
+                                className={`p-2.5 rounded-xl border transition-all cursor-pointer ${isBlockedVal ? 'bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200' : 'bg-rose-100 text-rose-600 border-rose-200 hover:bg-rose-200'}`}
                                 title={isBlockedVal ? "Desbloquear Empresa" : "Bloquear Acesso da Oficina"}
                               >
                                 {isBlockedVal ? <CheckCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
@@ -1054,7 +1054,7 @@ export default function MasterDashboard({
 
             {showAddUserForm && (
               <form onSubmit={handleCreateAdminUser} className="bg-amber-50 dark:bg-neutral-800 border-2 border-neutral-300 dark:border-neutral-700 p-6 rounded-2xl space-y-4 animate-fadeIn text-neutral-900 dark:text-neutral-100">
-                <h4 className="text-xs font-black uppercase tracking-wider text-neutral-950 dark:text-neutral-50 pb-2 mb-2 flex items-center gap-1.5 border-b border-black dark:border-neutral-750">
+                <h4 className="text-xs font-black uppercase tracking-wider text-neutral-950 dark:text-neutral-50 pb-2 mb-2 flex items-center gap-1.5 border-b border-black dark:border-neutral-800">
                   <Plus className="w-4 h-4 text-neutral-950 dark:text-neutral-50" /> Cadastrar Administrador de Empresa Existente
                 </h4>
 
@@ -1112,13 +1112,13 @@ export default function MasterDashboard({
                   <button
                     type="button"
                     onClick={() => setShowAddUserForm(false)}
-                    className="bg-white dark:bg-neutral-900 border border-neutral-350 hover:bg-neutral-100 p-3 font-bold uppercase cursor-pointer text-neutral-750 dark:text-neutral-350 rounded-xl"
+                    className="bg-white dark:bg-neutral-900 border border-neutral-300 hover:bg-neutral-100 p-3 font-bold uppercase cursor-pointer text-neutral-700 dark:text-neutral-300 rounded-xl"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 p-3 font-black uppercase tracking-widest hover:bg-neutral-850 cursor-pointer rounded-xl flex items-center gap-2"
+                    className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 p-3 font-black uppercase tracking-widest hover:bg-neutral-800 cursor-pointer rounded-xl flex items-center gap-2"
                   >
                     <Check className="w-4 h-4 stroke-[3]" /> Concluir & Vincular Administrador
                   </button>
@@ -1152,7 +1152,7 @@ export default function MasterDashboard({
                         <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-mono font-bold whitespace-nowrap">
                           {u.phone ? (
                             <div className="flex flex-col items-start gap-1">
-                              <span className="text-xs text-neutral-850 dark:text-neutral-205">{u.phone}</span>
+                              <span className="text-xs text-neutral-800 dark:text-neutral-200">{u.phone}</span>
                               <a 
                                 href={`https://wa.me/${(u.phone.replace(/\D/g, '').length <= 11 && !u.phone.replace(/\D/g, '').startsWith('55')) ? '55' : ''}${u.phone.replace(/\D/g, '')}`}
                                 target="_blank"
@@ -1166,7 +1166,7 @@ export default function MasterDashboard({
                             <span className="text-neutral-400">—</span>
                           )}
                         </td>
-                        <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-mono bg-neutral-100/30 text-neutral-900 dark:text-neutral-150 text-xs">
+                        <td className="p-3 border-r border-neutral-200 dark:border-neutral-700 font-mono bg-neutral-100/30 text-neutral-900 dark:text-neutral-100 text-xs">
                           <div className="flex flex-col gap-1 items-start">
                             <span className="font-mono text-yellow-600 dark:text-yellow-400 font-black tracking-wide text-xs">{u.password || 'Sem Senha'}</span>
                             <button
@@ -1224,7 +1224,7 @@ export default function MasterDashboard({
         {passwordEditingUser && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="bg-white dark:bg-neutral-900 border-4 border-yellow-300 rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scaleUp text-neutral-900 dark:text-neutral-100">
-              <div className="flex items-center gap-2 border-b-2 border-neutral-100 dark:border-neutral-850 pb-3">
+              <div className="flex items-center gap-2 border-b-2 border-neutral-100 dark:border-neutral-800 pb-3">
                 <KeyRound className="w-5 h-5 text-yellow-600 dark:text-yellow-400 stroke-[2.5]" />
                 <h4 className="text-sm font-black uppercase tracking-tight">Editar Acesso do Admin</h4>
               </div>
@@ -1286,7 +1286,7 @@ export default function MasterDashboard({
                     setNewAdminEmailInput('');
                     setNewAdminPasswordInput('');
                   }}
-                  className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-850 dark:hover:bg-neutral-200 text-white dark:text-neutral-950 px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-md"
+                  className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-neutral-950 px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer shadow-md"
                 >
                   Confirmar
                 </button>
@@ -1308,7 +1308,7 @@ export default function MasterDashboard({
                 <button
                   type="button"
                   onClick={() => setDeleteConfirm(null)}
-                  className="bg-neutral-150 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-300 px-4 py-2 text-xs font-bold uppercase rounded-xl cursor-pointer"
+                  className="bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-300 px-4 py-2 text-xs font-bold uppercase rounded-xl cursor-pointer"
                 >
                   Cancelar
                 </button>

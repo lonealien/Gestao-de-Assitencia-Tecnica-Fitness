@@ -228,7 +228,7 @@ export default function DashboardStats({
           className={`border border-neutral-200 dark:border-neutral-700 p-4 rounded-2xl flex flex-col justify-between min-h-[110px] cursor-pointer text-left transition-all hover:scale-[1.02] ${
             listFilter === 'pendentes'
               ? 'bg-yellow-200 dark:bg-yellow-900/60 shadow-sm dark:shadow-none ring-2 ring-black font-semibold'
-              : 'bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:bg-yellow-900/50/50 dark:hover:bg-yellow-900/50 shadow-sm dark:shadow-none'
+              : 'bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 shadow-sm dark:shadow-none'
           }`}
         >
           <div className="flex justify-between items-start text-neutral-900 dark:text-neutral-100 w-full">
@@ -249,7 +249,7 @@ export default function DashboardStats({
           className={`border border-neutral-200 dark:border-neutral-700 p-4 rounded-2xl flex flex-col justify-between min-h-[110px] cursor-pointer text-left transition-all hover:scale-[1.02] ${
             listFilter === 'conserto'
               ? 'bg-blue-200 dark:bg-blue-900/60 shadow-sm dark:shadow-none ring-2 ring-black font-semibold'
-              : 'bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-105/50 dark:hover:bg-blue-900/50 shadow-sm dark:shadow-none'
+              : 'bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 shadow-sm dark:shadow-none'
           }`}
         >
           <div className="flex justify-between items-start text-neutral-900 dark:text-neutral-100 w-full">
@@ -272,7 +272,7 @@ export default function DashboardStats({
           className={`border border-neutral-200 dark:border-neutral-700 p-4 rounded-2xl flex flex-col justify-between min-h-[110px] cursor-pointer text-left transition-all hover:scale-[1.02] ${
             listFilter === 'finalizadas'
               ? 'bg-emerald-200 dark:bg-emerald-900/60 shadow-sm dark:shadow-none ring-2 ring-black font-semibold'
-              : 'bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-105/50 dark:hover:bg-emerald-900/50 shadow-sm dark:shadow-none'
+              : 'bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 shadow-sm dark:shadow-none'
           }`}
         >
           <div className="flex justify-between items-start text-neutral-900 dark:text-neutral-100 w-full">
@@ -472,8 +472,8 @@ export default function DashboardStats({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             {displayedOrdens.map(o => {
               // Priority styling
-              const prioBg = o.priority === 'Alta' ? 'bg-rose-100 text-rose-850'
-                : o.priority === 'Média' ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-850'
+              const prioBg = o.priority === 'Alta' ? 'bg-rose-100 text-rose-800'
+                : o.priority === 'Média' ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-800'
                 : 'bg-neutral-100 text-neutral-700';
 
               // Status styling

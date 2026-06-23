@@ -800,16 +800,14 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <span className="font-black text-neutral-900 dark:text-neutral-100 tracking-tight text-sm uppercase">{activeStoreSettings.name}</span>
-              <span className="text-neutral-300 dark:text-neutral-600">•</span>
-              <span className="font-bold font-mono">SISTEMA v2.0 ( BETA )</span>
+              <span className="text-[10px] font-bold font-mono">SISTEMA v2.0 ( BETA )</span>
             </div>
             {loggedUser?.assistenciaId && (
               <span className="text-[9px] font-mono font-bold text-neutral-400">ID DA REDE INTERNA: {loggedUser.assistenciaId}</span>
             )}
           </div>
           <div className="flex space-x-6 font-black tracking-widest">
-            <span className="font-mono tracking-tight text-[10px] bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-0.5">BY: LONE TECH</span>
+            <span className="font-mono tracking-tight text-[8px] bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-0.5">BY: LONE TECH</span>
           </div>
         </div>
       </footer>

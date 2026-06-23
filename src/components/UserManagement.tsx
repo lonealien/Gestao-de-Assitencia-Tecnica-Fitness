@@ -293,7 +293,7 @@ export default function UserManagement({
       )}
 
       {errorMsg && (
-        <div className="bg-rose-250 border border-neutral-200 dark:border-neutral-700 p-3 text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wide flex items-center gap-2">
+        <div className="bg-rose-100 border border-neutral-200 dark:border-neutral-700 p-3 text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wide flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-red-600" /> {errorMsg}
         </div>
       )}
@@ -444,6 +444,35 @@ export default function UserManagement({
                 </div>
               )}
 
+              {selectedRole === 'TECNICO' && (
+                <div>
+                  <label htmlFor="user-tec-link-select" className="block text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-1">
+                    Vincular a qual Técnico?
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      id="user-tec-link-select"
+                      value={selectedTecId}
+                      onChange={(e) => {
+                        setSelectedTecId(e.target.value);
+                        setCreateTecOnTheFly(e.target.value === '');
+                      }}
+                      className="flex-1 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                    >
+                      <option value="">+ Criar novo técnico com este nome</option>
+                      {tecnicos.filter(t => t.assistenciaId === (selectedAstId || currentUser.assistenciaId)).map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="text-[10px] text-neutral-500 mt-1 italic">
+                    {selectedTecId ? "✓ O usuário terá acesso aos dados deste técnico." : "💡 Um novo registro de técnico será criado automaticamente."}
+                  </p>
+                </div>
+              )}
+
 
             </div>
           )}
@@ -541,7 +570,7 @@ export default function UserManagement({
                       ) : (
                         u.phone ? (
                           <div className="flex flex-col items-start gap-1">
-                            <span className="text-xs text-neutral-850 dark:text-neutral-205">{u.phone}</span>
+                            <span className="text-xs text-neutral-800 dark:text-neutral-200">{u.phone}</span>
                             <a 
                               href={`https://wa.me/${(u.phone.replace(/\D/g, '').length <= 11 && !u.phone.replace(/\D/g, '').startsWith('55')) ? '55' : ''}${u.phone.replace(/\D/g, '')}`}
                               target="_blank"
@@ -797,7 +826,7 @@ export default function UserManagement({
                                       }
                                     });
                                   }}
-                                  className="bg-neutral-100 text-red-600 hover:bg-neutral-250 p-1.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl transition-colors cursor-pointer"
+                                  className="bg-neutral-100 text-red-600 hover:bg-neutral-200 p-1.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl transition-colors cursor-pointer"
                                   title="Excluir Permanentemente"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -950,7 +979,7 @@ export default function UserManagement({
               <button
                 type="button"
                 onClick={() => setDeleteConfirm(null)}
-                className="bg-neutral-150 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-300 px-4 py-2 text-xs font-bold uppercase rounded-xl cursor-pointer"
+                className="bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-300 px-4 py-2 text-xs font-bold uppercase rounded-xl cursor-pointer"
               >
                 Cancelar
               </button>
