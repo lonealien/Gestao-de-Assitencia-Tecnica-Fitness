@@ -62,9 +62,6 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
               role: data.senderRole
             });
             setHasUnread(true);
-
-            // Auto hide notification after 5 seconds
-            setTimeout(() => setNotification(null), 8000);
           }
         }
       });
@@ -189,41 +186,6 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 translate-y-0">
-      {/* PM Notification Toast */}
-      {notification && (
-        <div 
-          onClick={() => openPrivateChat({ id: notification.senderId, name: notification.senderName, role: notification.role })}
-          className="bg-white dark:bg-neutral-800 border-2 border-blue-500 shadow-2xl rounded-2xl p-4 w-72 cursor-pointer animate-slideInRight hover:scale-105 transition-all group"
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex items-center gap-2">
-              <div className="bg-blue-100 dark:bg-blue-900/30 p-1.5 rounded-lg text-blue-600">
-                <Bell size={16} className="animate-bounce" />
-              </div>
-              <span className="text-xs font-black text-blue-600 uppercase tracking-tighter">Nova Mensagem Privada</span>
-            </div>
-            <button 
-              onClick={(e) => { e.stopPropagation(); setNotification(null); }}
-              className="text-neutral-400 hover:text-neutral-600 p-1"
-            >
-              <X size={14} />
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="bg-neutral-100 dark:bg-neutral-700 p-2 rounded-xl">
-              <User size={20} className="text-neutral-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-neutral-900 dark:text-white truncate">{notification.senderName}</p>
-              <p className="text-xs text-neutral-500 truncate line-clamp-1 italic">"{notification.text}"</p>
-            </div>
-          </div>
-          <div className="mt-3 text-[10px] text-blue-600 font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-            Clique para responder <ChevronLeft size={10} className="rotate-180" />
-          </div>
-        </div>
-      )}
-
       {isOpen && (
         <div className="relative w-[320px] h-[500px] bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl flex flex-col border dark:border-neutral-700 overflow-hidden animate-fadeIn">
           <div className="flex justify-between items-center p-3 bg-neutral-100 dark:bg-neutral-700 border-b dark:border-neutral-700">
@@ -241,9 +203,12 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
                     <>
                       Chat Geral
                       {notification && (
-                        <span className="text-[10px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full animate-pulse ml-1">
+                        <button 
+                          onClick={() => openPrivateChat({ id: notification.senderId, name: notification.senderName, role: notification.role })}
+                          className="text-[10px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full animate-pulse ml-1 hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors cursor-pointer"
+                        >
                           +1 {notification.senderName}
-                        </span>
+                        </button>
                       )}
                     </>
                   ) : recipient.name
