@@ -28,10 +28,20 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
       await addDoc(collection(db, `chats/${assistenciaId}/messages`), {
         text: newMessage,
         senderId: currentUser.id,
-        senderName: currentUser.username,
+        senderName: currentUser.name,
+        senderRole: currentUser.role,
         createdAt: serverTimestamp()
       });
       setNewMessage('');
+    }
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return 'text-red-500';
+      case 'ATENDENTE': return 'text-blue-500';
+      case 'TECNICO': return 'text-green-500';
+      default: return 'text-neutral-500';
     }
   };
 
@@ -56,8 +66,8 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
             {messages.map(m => (
                 <div key={m.id} className={m.senderId === currentUser.id ? 'text-right' : ''}>
-                    <div className={`inline-block p-2 rounded text-xs ${m.senderId === currentUser.id ? 'bg-blue-600 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100'}`}>
-                        <div className="block font-bold mb-0.5">{m.senderName}</div>
+                    <div className={`inline-block p-2 rounded text-xs bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 border border-neutral-200 dark:border-neutral-600`}>
+                        <div className={`block font-bold mb-0.5 ${getRoleColor(m.senderRole)}`}>{m.senderName}</div>
                         <div className="block">{m.text}</div>
                     </div>
                 </div>
