@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { StoreSettings } from '../types';
-import { Settings as SettingsIcon, Image as ImageIcon, Type, Upload, Crop as CropIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Image as ImageIcon, Upload, Crop as CropIcon } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import { maskPhone, maskDocument, maskCEP } from '../utils';
 
@@ -91,33 +91,6 @@ export default function SettingsModal({ currentSettings, onSave, onClose, isGlob
     onClose();
   };
 
-  const handleResetSystem = () => {
-    const password = prompt("Digite a senha de administrador para resetar o sistema:");
-    if (password === "0000") {
-      if (confirm("TEM CERTEZA? Isso deletará todos os usuários, logs, ordens e configurações. O sistema será reiniciado.")) {
-        localStorage.removeItem('usuarios_fitness_v2');
-        localStorage.removeItem('assistencias_fitness_v2');
-        localStorage.removeItem('tecnicos_fitness_v2');
-        localStorage.removeItem('ordens_fitness_v2');
-        window.location.reload();
-      }
-    } else if (password !== null) {
-      alert("Senha incorreta.");
-    }
-  };
-
-  const handleResetTecnicos = () => {
-    const password = prompt("Digite a senha de administrador para resetar a lista de técnicos:");
-    if (password === "0000") {
-      if (confirm("TEM CERTEZA? Isso deletará todos os técnicos cadastrados e restaurará a lista inicial.")) {
-        localStorage.removeItem('tecnicos_fitness_v2');
-        window.location.reload();
-      }
-    } else if (password !== null) {
-      alert("Senha incorreta.");
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 w-full max-w-md shadow-sm dark:shadow-none flex flex-col max-h-[90vh]">
@@ -189,7 +162,7 @@ export default function SettingsModal({ currentSettings, onSave, onClose, isGlob
           <form onSubmit={handleSave} className="p-6 space-y-6 overflow-y-auto">
             <div>
               <label className="block text-xs font-black uppercase text-neutral-800 dark:text-neutral-200 mb-2 flex items-center gap-2">
-                <Type className="w-4 h-4" /> Nome da Assistência
+                 Nome da Assistência
               </label>
               <input
                 type="text"
@@ -356,26 +329,6 @@ export default function SettingsModal({ currentSettings, onSave, onClose, isGlob
               >
                 SALVAR ALTERAÇÕES
               </button>
-              
-              {isGlobalAdmin && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleResetSystem}
-                    className="w-full bg-rose-600 text-white px-4 py-2 font-black uppercase tracking-wider text-xs border border-rose-700 hover:bg-rose-700 transition-all"
-                  >
-                    Resetar Sistema
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleResetTecnicos}
-                    className="w-full bg-orange-600 text-white px-4 py-2 font-black uppercase tracking-wider text-xs border border-orange-700 hover:bg-orange-700 transition-all"
-                  >
-                    Resetar Técnicos
-                  </button>
-                </>
-              )}
             </div>
           </form>
         )}

@@ -18,6 +18,7 @@ import LoginScreen from './components/LoginScreen';
 import UserManagement from './components/UserManagement';
 import SettingsModal from './components/SettingsModal';
 import MasterDashboard from './components/MasterDashboard';
+import ChatBox from './components/ChatBox';
 import BlockedAccessModal from './components/BlockedAccessModal';
 
 import { 
@@ -818,6 +819,9 @@ export default function App() {
           message={blockedModalMessage} 
           onClose={() => setBlockedModalMessage(null)} 
         />
+      )}
+      {loggedUser && (
+        <ChatBox currentUser={loggedUser} />
       )}
 
     </div>
