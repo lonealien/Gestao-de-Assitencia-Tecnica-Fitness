@@ -50,7 +50,16 @@ export default function App() {
   });
 
   // UI state toggles
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'ordens' | 'usuarios'>('ordens');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'ordens' | 'usuarios'>(() => {
+    const savedUser = localStorage.getItem('logged_user_fitness');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u.role !== 'TECNICO') return 'dashboard';
+      } catch (e) {}
+    }
+    return 'ordens';
+  });
   const [showAddOSForm, setShowAddOSForm] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -174,7 +183,13 @@ export default function App() {
     const savedUser = localStorage.getItem('logged_user_fitness');
     if (savedUser) {
       try {
-        setLoggedUser(JSON.parse(savedUser));
+        const u = JSON.parse(savedUser);
+        setLoggedUser(u);
+        if (u.role !== 'TECNICO') {
+          setActiveTab('dashboard');
+        } else {
+          setActiveTab('ordens');
+        }
       } catch (e) {
         console.error('Falha ao restaurar usuário logado', e);
       }
@@ -365,7 +380,11 @@ export default function App() {
           setLoggedUser(user);
           localStorage.setItem('logged_user_fitness', JSON.stringify(user));
           // Direct initial tab landing
-          setActiveTab('ordens');
+          if (user.role !== 'TECNICO') {
+            setActiveTab('dashboard');
+          } else {
+            setActiveTab('ordens');
+          }
         }}
       />
     );

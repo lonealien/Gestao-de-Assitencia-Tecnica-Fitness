@@ -3,7 +3,8 @@ import { OrdemServico, UserRole } from '../types';
 import { 
   Plus, AlertTriangle, ShieldCheck, Activity, RotateCw, CheckCircle, 
   Clock, DollarSign, Hammer, Calendar, Eye, X, Phone, Mail, MapPin, 
-  User, ClipboardCheck, ArrowRight, ShieldAlert, FileText, Lock
+  User, ClipboardCheck, ArrowRight, ShieldAlert, FileText, Lock,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 
 interface DashboardStatsProps {
@@ -40,6 +41,23 @@ export default function DashboardStats({
   const [customSearchStartDate, setCustomSearchStartDate] = useState<string>(firstDayOfMonth);
   const [customSearchEndDate, setCustomSearchEndDate] = useState<string>(todayStr);
   const [selectedOS, setSelectedOS] = useState<OrdemServico | null>(null);
+  const [expandedDashCards, setExpandedDashCards] = useState<Record<string, boolean>>({});
+
+  const safeFormatDate = (dateVal: string | undefined | null) => {
+    if (!dateVal) return '-';
+    try {
+      const parts = dateVal.split('T')[0].split('-');
+      if (parts.length === 3) {
+        // YYYY-MM-DD
+        return `${parts[2].substring(0,2)}/${parts[1]}/${parts[0]}`;
+      }
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString('pt-BR');
+    } catch (e) {
+      return '-';
+    }
+  };
 
   const total = ordens.length;
   const pendente = ordens.filter(o => o.status === 'Pendente').length;
@@ -451,7 +469,7 @@ export default function DashboardStats({
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             {displayedOrdens.map(o => {
               // Priority styling
               const prioBg = o.priority === 'Alta' ? 'bg-rose-100 text-rose-850'
@@ -465,83 +483,118 @@ export default function DashboardStats({
                 : 'bg-neutral-200 text-neutral-900 dark:text-neutral-100';
 
               const isPrevistoHoje = isTodayMatch(o.deliveryTargetDate);
+              const isExpanded = !!expandedDashCards[o.id];
 
               return (
                 <div 
                   key={o.id} 
-                  className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 p-4 rounded-2xl shadow-sm dark:shadow-none hover:shadow-md  transition-all flex flex-col justify-between space-y-4"
+                  className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm dark:shadow-none hover:shadow-md transition-all flex flex-col justify-between overflow-hidden"
                 >
-                  <div className="space-y-2">
+                  {/* Clickable Header for Collapsing/Expanding */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedDashCards(prev => ({ [o.id]: !prev[o.id] }))}
+                    className="w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-900/40 transition-all flex flex-col justify-between space-y-3 cursor-pointer select-none"
+                  >
                     {/* ID and Badges row */}
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-black tracking-widest text-neutral-900 dark:text-neutral-100 bg-neutral-100 border border-neutral-200 dark:border-neutral-700 px-2 py-0.5">
-                        {o.idFormatado}
-                      </span>
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-black tracking-widest text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 px-2 py-0.5 rounded">
+                          {o.idFormatado}
+                        </span>
                         {isPrevistoHoje && (
-                          <span className="bg-red-500 text-white dark:text-neutral-900 text-[9px] font-black uppercase px-1.5 py-0.5 tracking-wider border border-neutral-200 dark:border-neutral-700 animate-pulse">
+                          <span className="bg-red-500 text-white dark:text-neutral-900 text-[9px] font-black uppercase px-1.5 py-0.5 tracking-wider border border-neutral-200 dark:border-neutral-700 animate-pulse rounded">
                             PREVISTO HOJE
                           </span>
                         )}
-                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl ${prioBg}`}>
-                          {o.priority}
-                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
                         <span className={`text-[9px] font-black uppercase px-2 py-0.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl ${statusColors}`}>
                           {o.status}
+                        </span>
+                        <span className="text-neutral-400 dark:text-neutral-500 ml-1">
+                          {isExpanded ? <ChevronUp className="w-4 h-4 stroke-[3]" /> : <ChevronDown className="w-4 h-4 stroke-[3]" />}
                         </span>
                       </div>
                     </div>
 
-                    {/* Machine and client detail */}
-                    <div>
-                      <h4 className="text-sm font-black uppercase tracking-tight text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
-                        {o.equipmentType} • {o.equipmentBrand}
-                        <span className="font-normal font-mono text-xs text-neutral-500">({o.equipmentModel})</span>
+                    {/* Machine and client detail configured exactly as: Client Name under OS, and Equipment details below Client Name */}
+                    <div className="space-y-1.5">
+                      {/* Line 1: Client Name under OS Number */}
+                      <div className="text-xs text-neutral-500 font-bold uppercase tracking-wide flex items-center gap-1">
+                        <User className="w-3.5 h-3.5 stroke-[2] shrink-0 text-neutral-500" />
+                        <span className="text-neutral-950 dark:text-white font-extrabold text-sm normal-case">{o.clientName}</span>
+                      </div>
+                      
+                      {/* Line 2: Equipment details under Client Name */}
+                      <h4 className="text-xs font-bold uppercase tracking-tight text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5 pl-4.5">
+                        <span>🛠️ {o.equipmentType} • {o.equipmentBrand}</span>
+                        <span className="font-medium font-mono text-[11px] text-neutral-400 dark:text-neutral-500">({o.equipmentModel})</span>
                       </h4>
-                      <p className="text-xs text-neutral-500 font-bold mt-1 uppercase tracking-wide flex items-center gap-1">
-                        <User className="w-3.5 h-3.5 stroke-[2]" />
-                        {o.clientName}
+                    </div>
+                  </button>
+
+                  {/* Expanded Area with additional details and core functional actions */}
+                  {isExpanded && (
+                    <div className="p-4 pt-0 border-t border-neutral-100 dark:border-neutral-700/50 space-y-3 bg-neutral-50/50 dark:bg-neutral-900/10">
+                      {/* Dates Row */}
+                      <div className="grid grid-cols-2 gap-2 mt-3">
+                        <div className="bg-white dark:bg-neutral-800 p-2 rounded-xl border border-neutral-200 dark:border-neutral-700">
+                          <span className="text-[8px] font-black uppercase text-neutral-400 block tracking-wider leading-none mb-1">Data do Chamado</span>
+                          <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 font-mono">
+                            {safeFormatDate(o.createdAt)}
+                          </span>
+                        </div>
+                        <div className="bg-white dark:bg-neutral-800 p-2 rounded-xl border border-neutral-200 dark:border-neutral-700">
+                          <span className="text-[8px] font-black uppercase text-neutral-400 block tracking-wider leading-none mb-1">Data de Conclusão</span>
+                          <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100 font-mono">
+                            {o.completionDate ? safeFormatDate(o.completionDate) : 'Em andamento'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Issue truncation block */}
+                      <p className="text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 p-3 rounded-xl">
+                        <span className="font-black uppercase text-[10px] text-neutral-500 mr-1 block mb-1">Problema Relatado:</span>
+                        {o.reportedIssue}
                       </p>
-                    </div>
 
-                    {/* Issue truncation */}
-                    <p className="text-xs font-medium text-neutral-700 bg-neutral-50 border border-neutral-200 dark:border-neutral-700 p-2 line-clamp-2">
-                      <span className="font-black uppercase text-[10px] text-neutral-500 mr-1">Problema:</span>
-                      {o.reportedIssue}
-                    </p>
-                  </div>
-
-                  {/* Actions footer */}
-                  <div className="flex items-center justify-between border-t border-neutral-200 dark:border-neutral-700 pt-3">
-                    <span className="text-[10px] font-mono font-bold text-neutral-500 uppercase tracking-tighter">
-                      Prev: {o.deliveryTargetDate ? o.deliveryTargetDate.split('-').reverse().join('/') : 'Sem previsão'}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setSelectedOS(o)}
-                        className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 text-white dark:text-neutral-900 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 flex items-center gap-1 cursor-pointer transition-all active:translate-x-0.5"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        Visualizar Ficha
-                      </button>
-                      {onEditOS ? (
-                        <button
-                          onClick={() => {
-                            if (isReadOnly && currentRole !== 'ADMIN') {
-                              onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura.");
-                              return;
-                            }
-                            onEditOS(o.id);
-                          }}
-                          className="bg-yellow-300 hover:bg-yellow-400 text-neutral-900 dark:text-neutral-100 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 flex items-center gap-1 cursor-pointer transition-all active:translate-x-0.5"
-                          title="Editar OS Diretamente"
-                        >
-                          <Hammer className="w-3.5 h-3.5" />
-                          Editar
-                        </button>
-                      ) : null}
+                      {/* Actions footer */}
+                      <div className="flex items-center justify-end pt-3 border-t border-neutral-200/60 dark:border-neutral-700/60">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedOS(o);
+                            }}
+                            className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 text-white dark:text-neutral-900 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 flex items-center gap-1 cursor-pointer transition-all active:translate-x-0.5"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            Visualizar OS
+                          </button>
+                          {onEditOS ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isReadOnly && currentRole !== 'ADMIN') {
+                                  onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura.");
+                                  return;
+                                }
+                                onEditOS(o.id);
+                              }}
+                              className="bg-yellow-300 hover:bg-yellow-400 text-neutral-900 dark:text-neutral-100 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 flex items-center gap-1 cursor-pointer transition-all active:translate-x-0.5"
+                              title="Editar OS Diretamente"
+                            >
+                              <Hammer className="w-3.5 h-3.5" />
+                              Editar
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
@@ -572,18 +625,14 @@ export default function DashboardStats({
             <div className="p-6 overflow-y-auto space-y-6">
               
               {/* Header metrics */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-yellow-100 dark:bg-yellow-900/50 border border-neutral-200 dark:border-neutral-700 p-4">
+              <div className="grid grid-cols-2 gap-2 bg-yellow-100 dark:bg-yellow-900/50 border border-neutral-200 dark:border-neutral-700 p-4">
                 <div>
                   <span className="text-[9px] font-black uppercase text-gray-500 block leading-none">STATUS ATUAL</span>
                   <span className="text-xs font-black uppercase text-neutral-900 dark:text-neutral-100 mt-1 inline-block bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-1.5 py-0.5">{selectedOS.status}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-black uppercase text-gray-500 block leading-none">GRAU DE URGÊNCIA</span>
-                  <span className="text-xs font-black uppercase text-rose-600 mt-1 inline-block bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-1.5 py-0.5">{selectedOS.priority}</span>
-                </div>
-                <div className="col-span-2 sm:col-span-1">
                   <span className="text-[9px] font-black uppercase text-gray-500 block leading-none">OUTLAY ESTIMADO</span>
-                  <span className="text-xs font-black uppercase text-emerald-700 mt-1 inline-block bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-1.5 py-0.5 font-mono">R$ {selectedOS.totalCostValue.toFixed(2)}</span>
+                  <span className="text-xs font-black uppercase text-emerald-700 mt-1 inline-block bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-1.5 py-0.5 font-mono">R$ {(selectedOS.totalCostValue || 0).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -633,27 +682,24 @@ export default function DashboardStats({
                 </div>
               </div>
 
-              {/* Metas e Compromissos */}
+              {/* Datas de Início e Finalização */}
               <div className="space-y-2">
-                <h4 className="text-xs font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-700 pb-1">Metas de SLA & Prazos Limites Pactuados</h4>
+                <h4 className="text-xs font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-700 pb-1">Data de Início e Finalização</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className="bg-amber-50 dark:bg-amber-900/30 border-2 border-amber-400 p-3 rounded-2xl">
-                    <span className="font-black text-amber-900 dark:text-amber-300 uppercase block tracking-wider text-[9px] mb-1">CUMPRIMENTO DO PRIMEIRO ATENDIMENTO</span>
+                    <span className="font-black text-amber-900 dark:text-amber-300 uppercase block tracking-wider text-[9px] mb-1">DATA DE INÍCIO</span>
                     <span className="text-sm font-mono font-black text-neutral-900 dark:text-neutral-100 block">
-                      {(() => {
-                        const limitAtendimento = selectedOS.atendimentoLimitDate || new Date(new Date(selectedOS.createdAt).getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                        return limitAtendimento.split('-').reverse().join('/');
-                      })()}
+                      {safeFormatDate(selectedOS.createdAt)}
                     </span>
-                    <span className="block text-[9px] text-amber-800 dark:text-amber-200 font-medium mt-1">Limite: 2 dias úteis de triagem pós-abertura (ou data prorrogada).</span>
+                    <span className="block text-[9px] text-amber-800 dark:text-amber-200 font-medium mt-1">Data em que a Ordem de Serviço foi iniciada e cadastrada.</span>
                   </div>
 
-                  <div className="bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-400 p-3 rounded-2xl">
-                    <span className="font-black text-blue-900 dark:text-blue-300 uppercase block tracking-wider text-[9px] mb-1">CUMPRIMENTO DA RESOLUÇÃO (CONSERTO)</span>
+                  <div className="bg-green-50 dark:bg-green-900/30 border-2 border-green-400 p-3 rounded-2xl">
+                    <span className="font-black text-green-900 dark:text-green-300 uppercase block tracking-wider text-[9px] mb-1">DATA DE FINALIZAÇÃO</span>
                     <span className="text-sm font-mono font-black text-neutral-900 dark:text-neutral-100 block">
-                      {selectedOS.deliveryTargetDate.split('-').reverse().join('/')}
+                      {selectedOS.completionDate ? safeFormatDate(selectedOS.completionDate) : 'Em andamento'}
                     </span>
-                    <span className="block text-[9px] text-blue-800 dark:text-blue-200 font-medium mt-1">Limite: 14 dias para encerramento técnico (ou data prorrogada).</span>
+                    <span className="block text-[9px] text-green-800 dark:text-green-200 font-medium mt-1">Data de conclusão do conserto e encerramento técnico.</span>
                   </div>
                 </div>
               </div>

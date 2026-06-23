@@ -108,6 +108,33 @@ export default function OrdemServicoList({
   const [sigClienteFinalInput, setSigClienteFinalInput] = useState<string>('');
   const [sigAberturaDataInput, setSigAberturaDataInput] = useState<string>('');
   const [sigFinalDataInput, setSigFinalDataInput] = useState<string>('');
+
+  const safeFormatDate = (dateVal: string | undefined | null) => {
+    if (!dateVal) return '-';
+    try {
+      const parts = dateVal.split('-');
+      if (parts.length === 3) {
+        // YYYY-MM-DD
+        return `${parts[2].substring(0,2)}/${parts[1]}/${parts[0]}`;
+      }
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString('pt-BR');
+    } catch (e) {
+      return '-';
+    }
+  };
+
+  const safeFormatDateTime = (dateVal: string | undefined | null) => {
+    if (!dateVal) return '-';
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '-';
+      return `${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    } catch (e) {
+      return '-';
+    }
+  };
   const [editFotos, setEditFotos] = useState<{url: string; description: string}[]>([]);
 
   const [expandedOSId, setExpandedOSId] = useState<string | null>(null);
@@ -193,6 +220,11 @@ export default function OrdemServicoList({
     }
   }, [initialSelectedOSId, ordens, currentRole, onClearInitialSelectedOSId]);
 
+  useEffect(() => {
+    // Ensure all OS cards are minimized by default on load
+    setExpandedCards({});
+  }, [ordens]);
+
   // Dynamically calculate estimated total budget for modified OS
   useEffect(() => {
     if (selectedOSId) {
@@ -270,7 +302,6 @@ export default function OrdemServicoList({
       return;
     }
     const hasVisitDateChanged = editScheduledVisitDate !== (os.scheduledVisitDate || '');
-    const hasCompletionDateChanged = editCompletionDate !== (os.completionDate || '');
 
     const hasSigsChanged = 
       sigTecnicoAberturaInput !== (os.sigTecnicoAbertura || '') ||
@@ -291,10 +322,27 @@ export default function OrdemServicoList({
 
     // Determine target/applied status. If completion date is present, force Status to 'Finalizada'.
     let appliedStatus = newStatus || os.status;
-    if (editCompletionDate && editCompletionDate.trim() !== '') {
+    let finalCompletionDate = editCompletionDate;
+
+    // Check if we are finalizing or if there are final signatures being added, but completion date is empty
+    const isFinalizing = appliedStatus === 'Finalizada' || 
+                         (sigTecnicoFinalInput && sigTecnicoFinalInput !== (os.sigTecnicoFinal || '')) || 
+                         (sigClienteFinalInput && sigClienteFinalInput !== (os.sigClienteFinal || ''));
+                         
+    if (isFinalizing && (!finalCompletionDate || finalCompletionDate.trim() === '') && !os.completionDate) {
+      finalCompletionDate = new Date().toISOString().split('T')[0];
+    }
+
+    if (finalCompletionDate && finalCompletionDate.trim() !== '') {
+      const startDateStr = os.createdAt ? os.createdAt.split('T')[0] : '';
+      if (startDateStr && finalCompletionDate < startDateStr) {
+        alert(`A data de finalização (${finalCompletionDate.split('-').reverse().join('/')}) não pode ser anterior à data de início (${startDateStr.split('-').reverse().join('/')}).`);
+        return;
+      }
       appliedStatus = 'Finalizada';
     }
 
+    const hasCompletionDateChanged = finalCompletionDate !== (os.completionDate || '');
     const hasStatusChanged = appliedStatus !== os.status;
 
     if (!hasStatusChanged && !hasFieldsChanged && (costInput === '') && !hasVisitDateChanged && !hasCompletionDateChanged && !hasSigsChanged && !hasFotosChanged) {
@@ -317,11 +365,11 @@ export default function OrdemServicoList({
     }
 
     if (hasCompletionDateChanged) {
-      updatedOS.completionDate = editCompletionDate;
+      updatedOS.completionDate = finalCompletionDate;
       historyEntries.push({
         date: dateFormatted,
         status: os.status,
-        description: `Data de finalização registrada como ${editCompletionDate.split('-').reverse().join('/')}`,
+        description: `Data de finalização registrada como ${finalCompletionDate ? finalCompletionDate.split('-').reverse().join('/') : 'N/A'}`,
         author: activeUserName
       });
     }
@@ -825,32 +873,31 @@ export default function OrdemServicoList({
                       {isCollapsedView && (
                         <button
                           type="button"
-                          onClick={() => setExpandedCards(prev => ({ ...prev, [os.id]: !prev[os.id] }))}
+                          onClick={() => setExpandedCards(prev => ({ [os.id]: !prev[os.id] }))}
                           className="w-full text-left p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/40 transition-all cursor-pointer select-none border-b border-neutral-100 dark:border-neutral-700/50"
                         >
-                          <div className="flex flex-wrap items-center gap-3">
-                            <div className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-mono font-black text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xs">
+                          <div className="flex flex-col gap-2.5">
+                            <div className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-mono font-black text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xs w-fit">
                               <span>⚙️ OS #{os.idFormatado}</span>
                             </div>
 
-                            <div>
-                              <span className="text-[8px] font-black text-neutral-400 block uppercase tracking-widest leading-none mb-0.5">Cliente</span>
-                              <span className="text-sm font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-tight block truncate max-w-[200px] sm:max-w-[320px]">
-                                {os.clientName}
-                              </span>
+                            <div className="space-y-1.5">
+                              <div>
+                                <span className="text-[8px] font-black text-neutral-400 block uppercase tracking-widest leading-none mb-0.5">Cliente</span>
+                                <span className="text-sm font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-tight block truncate max-w-[200px] sm:max-w-[320px]">
+                                  {os.clientName}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[8px] font-black text-neutral-400 block uppercase tracking-widest leading-none mb-0.5">Equipamento</span>
+                                <span className="text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-tight block">
+                                  {os.equipmentType} • {os.equipmentBrand} <span className="font-mono text-neutral-400 font-medium">({os.equipmentModel})</span>
+                                </span>
+                              </div>
                             </div>
                           </div>
 
                           <div className="flex flex-wrap items-center gap-3 sm:gap-5 ml-auto sm:ml-0">
-                            {visitDate && (
-                              <div className="text-right">
-                                <span className="text-[8px] font-black text-neutral-400 block uppercase tracking-widest leading-none mb-0.5">Visita Agendada</span>
-                                <span className="text-xs font-mono font-black text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-600">
-                                  {visitDate.split('-').reverse().join('/')}
-                                </span>
-                              </div>
-                            )}
-
                             <div className="text-right">
                               <span className="text-[8px] font-black text-neutral-400 block uppercase tracking-widest leading-none mb-0.5 text-right font-bold">Status OS</span>
                               <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 block ${getStatusColor(os.status)}`}>
@@ -1140,14 +1187,18 @@ export default function OrdemServicoList({
                         </button>
                       )}
 
-                      {(currentRole === 'ADMIN' || currentRole === 'ASSISTENCIA_GERENTE' || currentRole === 'ATENDENTE' || currentRole === 'MASTER') && (
+                      {(currentRole === 'ADMIN' || currentRole === 'ASSISTENCIA_GERENTE' || currentRole === 'ATENDENTE' || currentRole === 'MASTER' || currentRole === 'TECNICO') && (
                         <button
-                          onClick={() => setOsToExport(os)}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOsToExport(os);
+                          }}
                           className="bg-amber-300 hover:bg-amber-400 text-neutral-900 dark:text-neutral-100 px-3.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-xs font-black uppercase tracking-wider transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm dark:shadow-none hover:shadow-md w-full justify-center"
-                          title="Exportar OS para Cliente"
+                          title="Visualizar OS"
                         >
                           <FileText className="w-4 h-4 stroke-[2.5]" />
-                          Exportar
+                          Visualizar OS
                         </button>
                       )}
 
@@ -1189,7 +1240,6 @@ export default function OrdemServicoList({
                       <div className="space-y-4 pl-4 border-l-4 border-black relative">
                         {os.history.map((hist, index) => (
                           <div key={index} className="relative space-y-1">
-                            <span className="absolute -left-[22px] top-1.5 w-3 h-3 rounded-2xl bg-neutral-900 dark:bg-neutral-100 border-2 border-white" />
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs gap-1.5 font-bold">
                               <span className="text-neutral-900 dark:text-neutral-100 font-black uppercase tracking-tight">{hist.description}</span>
                               <span className="text-neutral-500 font-mono shrink-0">
@@ -1717,7 +1767,7 @@ export default function OrdemServicoList({
                     <div className="text-right">
                       <span className="text-[8px] font-black bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 px-2 py-0.5 uppercase tracking-widest">Documento Oficial</span>
                       <div className="text-sm font-black font-mono tracking-tight text-neutral-900 dark:text-neutral-100 mt-1">{osToExport.idFormatado}</div>
-                      <div className="text-[8px] font-bold font-mono text-neutral-500 uppercase mt-0.5">Abertura: {new Date(osToExport.createdAt).toLocaleDateString('pt-BR')}</div>
+                      <div className="text-[8px] font-bold font-mono text-neutral-500 uppercase mt-0.5">Abertura: {safeFormatDate(osToExport.createdAt)}</div>
                     </div>
                   </div>
                 );
@@ -1728,13 +1778,8 @@ export default function OrdemServicoList({
                 const isConcluida = osToExport.status === 'Finalizada';
                 
                 // Hunt for the date when it was finalized in history
-                const conclusionDate = osToExport.completionDate 
-                  ? new Date(osToExport.completionDate + 'T12:00:00').toLocaleDateString('pt-BR') 
-                  : '-';
-                
-                const visitDateStr = osToExport.scheduledVisitDate
-                  ? new Date(osToExport.scheduledVisitDate + 'T12:00:00').toLocaleDateString('pt-BR')
-                  : '-';
+                const conclusionDate = safeFormatDate(osToExport.completionDate);
+                const visitDateStr = safeFormatDate(osToExport.scheduledVisitDate);
 
                 return (
                   <div className={`border border-neutral-200 dark:border-neutral-700 p-3 flex justify-between items-center ${isConcluida ? 'bg-emerald-100 dark:bg-emerald-900/50' : 'bg-neutral-100 dark:bg-neutral-800/50'}`}>
@@ -1854,9 +1899,9 @@ export default function OrdemServicoList({
                         {osToExport.parts.map((p, i) => (
                           <tr key={i} className="border-b last:border-0 border-black font-bold">
                             <td className="p-1 px-2 uppercase">{p.name}</td>
-                            <td className="p-1 px-2 text-center font-mono">{p.quantity}</td>
-                            <td className="p-1 px-2 text-right font-mono">{p.value.toFixed(2)}</td>
-                            <td className="p-1 px-2 text-right font-mono">{(p.value * p.quantity).toFixed(2)}</td>
+                            <td className="p-1 px-2 text-center font-mono">{p.quantity || 0}</td>
+                            <td className="p-1 px-2 text-right font-mono">{(p.value || 0).toFixed(2)}</td>
+                            <td className="p-1 px-2 text-right font-mono">{((p.value || 0) * (p.quantity || 1)).toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1878,20 +1923,20 @@ export default function OrdemServicoList({
                   {osToExport.laborCostValue ? (
                     <div className="flex justify-between">
                       <span>Total Mão de Obra:</span>
-                      <span className="font-mono text-neutral-900 dark:text-neutral-100">R$ {osToExport.laborCostValue.toFixed(2)}</span>
+                      <span className="font-mono text-neutral-900 dark:text-neutral-100">R$ {(osToExport.laborCostValue || 0).toFixed(2)}</span>
                     </div>
                   ) : null}
                   {osToExport.taxaDeslocamento ? (
                     <div className="flex justify-between">
                       <span>Taxa Deslocamento:</span>
-                      <span className="font-mono text-neutral-900 dark:text-neutral-100">R$ {osToExport.taxaDeslocamento.toFixed(2)}</span>
+                      <span className="font-mono text-neutral-900 dark:text-neutral-100">R$ {(osToExport.taxaDeslocamento || 0).toFixed(2)}</span>
                     </div>
                   ) : null}
                 </div>
 
                 <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-2 flex flex-col justify-center items-end shadow-sm dark:shadow-none">
                   <span className="text-[7px] font-black uppercase tracking-widest text-neutral-500 leading-none">ORÇAMENTO TOTAL ESTIMADO</span>
-                  <span className="text-base font-black font-mono text-neutral-900 dark:text-neutral-100 mt-0.5">R$ {osToExport.totalCostValue.toFixed(2)}</span>
+                  <span className="text-base font-black font-mono text-neutral-900 dark:text-neutral-100 mt-0.5">R$ {(osToExport.totalCostValue || 0).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -1906,7 +1951,7 @@ export default function OrdemServicoList({
                     <span className="text-[8px] font-semibold bg-emerald-600 text-white px-1.5 py-0.5 uppercase tracking-widest">Pago / Quitado</span>
                   </div>
                   <p className="text-[9.2px] font-bold text-neutral-800 leading-relaxed text-justify">
-                    Declaramos que o serviço especificado nesta Ordem de Serviço foi concluído e testado. Confirmamos o recebimento e a quitação integral do valor de <strong className="font-extrabold uppercase text-emerald-900 text-[10px]">R$ {osToExport.totalCostValue.toFixed(2)}</strong> pago à Assistência Técnica / Técnico Responsável, sendo dado com este instrumento plena e geral quitação de direitos pelo reparo do equipamento, validado pelas assinaturas registradas abaixo.
+                    Declaramos que o serviço especificado nesta Ordem de Serviço foi concluído e testado. Confirmamos o recebimento e a quitação integral do valor de <strong className="font-extrabold uppercase text-emerald-900 text-[10px]">R$ {(osToExport.totalCostValue || 0).toFixed(2)}</strong> pago à Assistência Técnica / Técnico Responsável, sendo dado com este instrumento plena e geral quitação de direitos pelo reparo do equipamento, validado pelas assinaturas registradas abaixo.
                   </p>
                 </div>
               )}
@@ -1968,7 +2013,7 @@ export default function OrdemServicoList({
 
                 {osToExport.sigAberturaData && (
                   <p className="text-[7.5px] font-mono text-center font-bold text-neutral-500 uppercase">
-                    Visto Técnico Registrado em: {new Date(osToExport.sigAberturaData).toLocaleDateString('pt-BR')} {new Date(osToExport.sigAberturaData).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    Visto Técnico Registrado em: {safeFormatDateTime(osToExport.sigAberturaData)}
                   </p>
                 )}
               </div>
