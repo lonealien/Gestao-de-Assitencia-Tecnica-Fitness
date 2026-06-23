@@ -11,6 +11,7 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
   const [hasUnread, setHasUnread] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const isAtBottomRef = useRef(true);
   const assistenciaId = currentUser.assistenciaId || 'global';
   const isFirstLoad = useRef(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -25,8 +26,10 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
   const handleScroll = () => {
     if (scrollRef.current) {
         const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-        setIsAtBottom(scrollHeight - scrollTop - clientHeight < 100);
-        if (scrollHeight - scrollTop - clientHeight < 100) {
+        const newIsAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+        setIsAtBottom(newIsAtBottom);
+        isAtBottomRef.current = newIsAtBottom;
+        if (newIsAtBottom) {
             setUnreadCount(0);
         }
     }
@@ -49,7 +52,7 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
         if (!isFirstLoad.current) {
             if (!isOpen) {
                 setHasUnread(true);
-            } else if (!isAtBottom) {
+            } else if (!isAtBottomRef.current) {
                 setUnreadCount(prev => prev + snapshot.docChanges().filter(change => change.type === 'added').length);
             }
         }
@@ -58,7 +61,7 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
         setMessages(msgs);
     });
     return () => unsubscribe();
-  }, [assistenciaId, isOpen, isAtBottom]);
+  }, [assistenciaId, isOpen]);
 
   const sendMessage = async () => {
     if (newMessage.trim()) {
@@ -121,19 +124,21 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
           </div>
         </div>
       )}
-      <button
-        onClick={() => {
-          setIsOpen(!isOpen);
-          setHasUnread(false);
-        }}
-        className="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center hover:scale-105 active:scale-95 relative w-12 h-12"
-        title="Chat com usuários da empresa"
-      >
-        <MessageCircle className="w-5 h-5" />
-        {hasUnread && (
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-neutral-800 animate-pulse" />
-        )}
-      </button>
+      {!isOpen && (
+        <button
+          onClick={() => {
+            setIsOpen(!isOpen);
+            setHasUnread(false);
+          }}
+          className="bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center hover:scale-105 active:scale-95 relative w-12 h-12"
+          title="Chat com usuários da empresa"
+        >
+          <MessageCircle className="w-5 h-5" />
+          {hasUnread && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-neutral-800 animate-pulse" />
+          )}
+        </button>
+      )}
     </div>
   );
 }
