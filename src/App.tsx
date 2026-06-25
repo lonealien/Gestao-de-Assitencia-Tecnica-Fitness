@@ -21,6 +21,8 @@ import MasterDashboard from './components/MasterDashboard';
 import ChatBox from './components/ChatBox';
 import BlockedAccessModal from './components/BlockedAccessModal';
 import Navigation from './components/Navigation';
+import BackupModal from './components/BackupModal';
+import { shouldBackupToday } from './backupService';
 
 import { 
   Building2, ClipboardList, LayoutDashboard, Dumbbell, 
@@ -50,6 +52,7 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme_dark') === 'true';
   });
+  const [showBackupModal, setShowBackupModal] = useState(false);
 
   // UI state toggles
   const [activeTab, setActiveTab] = useState<'dashboard' | 'ordens' | 'usuarios'>(() => {
@@ -106,6 +109,15 @@ export default function App() {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  useEffect(() => {
+    if (loggedUser && (loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE')) {
+      const aid = loggedUser.assistenciaId || 'master';
+      if (shouldBackupToday(aid)) {
+        setShowBackupModal(true);
+      }
+    }
+  }, [loggedUser]);
 
   const handleMobileMenuToggle = () => {
     ignoreScrollUntil.current = Date.now() + 500; // Ignore scroll-based close for 500ms
@@ -634,6 +646,26 @@ export default function App() {
                   };
                   saveToFirestore('usuarios', usrWithTenant);
                 }}
+                onRestoreBackup={async (backup) => {
+                  if (backup.assistencia) {
+                    await saveToFirestore('assistencias', backup.assistencia);
+                  }
+                  if (backup.ordens && backup.ordens.length > 0) {
+                    for (const o of backup.ordens) {
+                      await saveToFirestore('ordens', o);
+                    }
+                  }
+                  if (backup.tecnicos && backup.tecnicos.length > 0) {
+                    for (const t of backup.tecnicos) {
+                      await saveToFirestore('tecnicos', t);
+                    }
+                  }
+                  if (backup.usuarios && backup.usuarios.length > 0) {
+                    for (const u of backup.usuarios) {
+                      await saveToFirestore('usuarios', u);
+                    }
+                  }
+                }}
                 onDeleteUser={(usrId) => {
                   deleteFromFirestore('usuarios', usrId);
                 }}
@@ -696,6 +728,13 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {showBackupModal && loggedUser && (
+        <BackupModal 
+          assistenciaId={loggedUser.assistenciaId || 'master'} 
+          onClose={() => setShowBackupModal(false)} 
+        />
+      )}
 
       {showSettings && (
         <SettingsModal 

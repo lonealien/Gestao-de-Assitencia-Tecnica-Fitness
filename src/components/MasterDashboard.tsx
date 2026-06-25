@@ -447,10 +447,12 @@ export default function MasterDashboard({
           return;
         }
 
+        // If we selected a specific assistance to restore into, verify it matches
         if (restoringAstId && restoringAstId !== backupObj.assistencia.id) {
-          triggerErrorMsg(`Este backup pertence à empresa ID "${backupObj.assistencia.id}". Você só pode restaurar backups correspondentes à empresa selecionada.`);
-          setRestoringAstId(null);
-          return;
+          if (!window.confirm(`Este backup pertence à empresa "${backupObj.assistencia.name}" (ID: ${backupObj.assistencia.id}), mas você selecionou outra empresa. Deseja restaurar assim mesmo como uma nova empresa ou atualizar a existente?`)) {
+            setRestoringAstId(null);
+            return;
+          }
         }
 
         // Inform user about restoration
@@ -471,6 +473,11 @@ export default function MasterDashboard({
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
+  };
+
+  const handleGlobalRestoreClick = () => {
+    setRestoringAstId(null);
+    fileInputRef.current?.click();
   };
 
   // Format Expiration status
@@ -719,6 +726,14 @@ export default function MasterDashboard({
                     Limpar Base do Sistema
                   </button>
                 )}
+                <button
+                  onClick={handleGlobalRestoreClick}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-widest px-5 py-3 border border-blue-700 rounded-2xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                >
+                  <Upload className="w-4 h-4" />
+                  Carregar Backup Geral
+                </button>
+
                 <button
                   onClick={() => setShowAddForm(!showAddForm)}
                   className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-neutral-800 text-xs font-black uppercase tracking-widest px-5 py-3 border border-neutral-200 dark:border-neutral-700 rounded-2xl transition-all flex items-center gap-2 cursor-pointer"

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AppUser, AssistenciaTecnica, Tecnico, UserRole, StoreSettings } from '../types';
-import { UserPlus, Shield, Hammer, Building2, Eye, KeyRound, Check, AlertCircle, X, Trash2, User, Ban, CheckCircle, Pencil } from 'lucide-react';
+import { UserPlus, Shield, Hammer, Building2, Eye, KeyRound, Check, AlertCircle, X, Trash2, User, Ban, CheckCircle, Pencil, Download, Upload } from 'lucide-react';
 import { getStoreDomain, maskPhone } from '../utils';
+import { fetchBackupData, downloadBackup, BackupData } from '../backupService';
 
 interface UserManagementProps {
   usuarios: AppUser[];
@@ -13,6 +14,7 @@ interface UserManagementProps {
   onToggleUserActive: (userId: string) => void;
   onAddTecnicoAndUser?: (newTecnico: Tecnico, userLogin: string, userPass: string) => void;
   onUpdateUser?: (user: AppUser) => void;
+  onRestoreBackup?: (backup: any) => Promise<void>;
   storeSettings?: StoreSettings;
   onShowBlockedAlert?: (message: string) => void;
 }
@@ -27,6 +29,7 @@ export default function UserManagement({
   onToggleUserActive,
   onAddTecnicoAndUser,
   onUpdateUser,
+  onRestoreBackup,
   storeSettings,
   onShowBlockedAlert
 }: UserManagementProps) {
@@ -56,10 +59,6 @@ export default function UserManagement({
   const [tecPhone, setTecPhone] = useState('');
 
   const [minimizedUsers, setMinimizedUsers] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    setMinimizedUsers(new Set(usuarios.map(u => u.id)));
-  }, [usuarios]);
   
   const toggleMinimize = (userId: string) => {
     const next = new Set(minimizedUsers);
@@ -67,6 +66,63 @@ export default function UserManagement({
     else next.add(userId);
     setMinimizedUsers(next);
   };
+
+  const [backupStatus, setBackupStatus] = useState<'idle' | 'loading'>('idle');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleManualBackup = async () => {
+    if (!currentUser.assistenciaId) return;
+    setBackupStatus('loading');
+    try {
+      const data = await fetchBackupData(currentUser.assistenciaId);
+      if (data) {
+        downloadBackup(data);
+        setSuccessMsg('Backup realizado com sucesso!');
+      }
+    } catch (err) {
+      setErrorMsg('Erro ao gerar backup.');
+    } finally {
+      setBackupStatus('idle');
+    }
+  };
+
+  const handleRestoreClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onRestoreBackup) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const backup = JSON.parse(event.target?.result as string);
+        if (backup.type !== 'assistencia_backup') {
+          setErrorMsg('Arquivo de backup inválido.');
+          return;
+        }
+        
+        if (currentUser.assistenciaId && backup.assistencia.id !== currentUser.assistenciaId) {
+          setErrorMsg('Este backup pertence a outra assistência e não pode ser restaurado aqui.');
+          return;
+        }
+
+        if (window.confirm('Deseja restaurar este backup? Dados atuais podem ser sobrescritos.')) {
+          await onRestoreBackup(backup);
+          setSuccessMsg('Backup restaurado com sucesso!');
+        }
+      } catch (err) {
+        setErrorMsg('Erro ao ler arquivo de backup.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  useEffect(() => {
+    setMinimizedUsers(new Set(usuarios.map(u => u.id)));
+  }, [usuarios]);
 
   // Inline editing states for admin
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -295,6 +351,50 @@ export default function UserManagement({
       {errorMsg && (
         <div className="bg-rose-100 border border-neutral-200 dark:border-neutral-700 p-3 text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wide flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-red-600" /> {errorMsg}
+        </div>
+      )}
+
+      {/* Backup and Security Section */}
+      {(currentUser.role === 'ADMIN' || currentUser.role === 'ASSISTENCIA_GERENTE') && (
+        <div className="bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-black uppercase tracking-widest text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-blue-600" />
+              Backup e Segurança dos Dados
+            </h4>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-neutral-800 p-4 border border-neutral-200 dark:border-neutral-700 rounded-xl space-y-3">
+              <p className="text-[10px] text-neutral-500 font-bold uppercase">Exportar Dados</p>
+              <p className="text-[11px] text-neutral-600 dark:text-neutral-400">Baixe uma cópia completa de todas as suas ordens, técnicos e usuários.</p>
+              <button
+                onClick={handleManualBackup}
+                disabled={backupStatus === 'loading'}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-[10px] font-black uppercase tracking-widest py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                {backupStatus === 'loading' ? 'Gerando...' : <><Download className="w-3.5 h-3.5" /> Fazer Backup Agora</>}
+              </button>
+            </div>
+
+            <div className="bg-white dark:bg-neutral-800 p-4 border border-neutral-200 dark:border-neutral-700 rounded-xl space-y-3">
+              <p className="text-[10px] text-neutral-500 font-bold uppercase">Restaurar Dados</p>
+              <p className="text-[11px] text-neutral-600 dark:text-neutral-400">Importe um arquivo de backup (.json) para recuperar informações.</p>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept=".json" 
+                className="hidden" 
+              />
+              <button
+                onClick={handleRestoreClick}
+                className="w-full bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-[10px] font-black uppercase tracking-widest py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5" /> Carregar Backup
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
