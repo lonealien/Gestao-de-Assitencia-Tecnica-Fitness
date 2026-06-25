@@ -343,6 +343,10 @@ export default function App() {
 
   // Add Service Order OS
   const handleRegisterOS = (newOS: OrdemServico) => {
+    if (isExpired) {
+      setBlockedModalMessage("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador.");
+      return;
+    }
     const osWithTenant = {
       ...newOS,
       assistenciaId: loggedUser?.assistenciaId || ''
@@ -354,6 +358,10 @@ export default function App() {
 
   // Update OS properties (e.g. status flow, history, diagnosis)
   const handleUpdateOS = (updatedOS: OrdemServico) => {
+    if (isExpired) {
+      setBlockedModalMessage("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador.");
+      return;
+    }
     saveToFirestore('ordens', updatedOS);
   };
 
@@ -500,6 +508,8 @@ export default function App() {
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         isHeaderMinimized={isHeaderMinimized}
         handleMobileMenuToggle={handleMobileMenuToggle}
+        isExpired={isExpired}
+        onShowBlockedAlert={(msg) => setBlockedModalMessage(msg)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -764,7 +774,11 @@ export default function App() {
         />
       )}
       {loggedUser && (
-        <ChatBox currentUser={loggedUser} />
+        <ChatBox 
+          currentUser={loggedUser} 
+          isExpired={isExpired}
+          onShowBlockedAlert={(msg) => setBlockedModalMessage(msg)}
+        />
       )}
 
     </div>

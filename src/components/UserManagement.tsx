@@ -197,6 +197,11 @@ export default function UserManagement({
     setSuccessMsg('');
     setErrorMsg('');
 
+    if (currentUser.isReadOnly) {
+      onShowBlockedAlert?.("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Cadastro de novos usuários suspenso.");
+      return;
+    }
+
     if (!name.trim() || !email.trim() || !password.trim()) {
       setErrorMsg('Por favor, preencha todos os campos obrigatórios (*).');
       return;

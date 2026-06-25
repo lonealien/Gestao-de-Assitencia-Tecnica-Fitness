@@ -184,7 +184,7 @@ export default function DashboardStats({
             <button
               onClick={() => {
                 if (isReadOnly) {
-                  onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura.");
+                  onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Abertura de OS suspensa.");
                   return;
                 }
                 onOpenNewOSForm();

@@ -298,7 +298,7 @@ export default function OrdemServicoList({
 
   const handleApplyUpdate = (os: OrdemServico) => {
     if (isReadOnly) {
-      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição de OS suspensa.");
       return;
     }
     const hasVisitDateChanged = editScheduledVisitDate !== (os.scheduledVisitDate || '');
@@ -550,7 +550,7 @@ export default function OrdemServicoList({
 
   const handleQuickAssign = (os: OrdemServico, tecId: string) => {
     if (isReadOnly) {
-       onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+       onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição de OS suspensa.");
        return;
     }
     
@@ -1023,9 +1023,15 @@ export default function OrdemServicoList({
                         {os.clientPhone && os.clientPhone.replace(/\D/g, '') !== '' && (
                           <div className="mt-2.5">
                             <a 
-                              href={`https://wa.me/${(os.clientPhone.replace(/\D/g, '').length <= 11 && !os.clientPhone.replace(/\D/g, '').startsWith('55')) ? '55' : ''}${os.clientPhone.replace(/\D/g, '')}`}
-                              target="_blank"
+                              href={isReadOnly ? '#' : `https://wa.me/${(os.clientPhone.replace(/\D/g, '').length <= 11 && !os.clientPhone.replace(/\D/g, '').startsWith('55')) ? '55' : ''}${os.clientPhone.replace(/\D/g, '')}`}
+                              target={isReadOnly ? '_self' : '_blank'}
                               rel="noopener noreferrer"
+                              onClick={(e) => {
+                                if (isReadOnly) {
+                                  e.preventDefault();
+                                  onShowBlockedAlert?.("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Contato com clientes suspenso.");
+                                }
+                              }}
                               className="inline-flex items-center gap-1.5 bg-[#25D366] hover:bg-[#20ba5a] text-white px-3 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm hover:shadow-md cursor-pointer"
                               title="Chamar no WhatsApp"
                             >
@@ -1128,7 +1134,7 @@ export default function OrdemServicoList({
                                   <button
                                     onClick={() => {
                                       if (isReadOnly) {
-                                        onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                        onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição de OS suspensa.");
                                         return;
                                       }
                                       setQuickAssignOSId(os.id);
@@ -1167,7 +1173,7 @@ export default function OrdemServicoList({
                         <button
                           onClick={() => {
                             if (isReadOnly) {
-                              onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                              onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição de OS suspensa.");
                               return;
                             }
                             setSelectedOSId(os.id);
@@ -1231,7 +1237,7 @@ export default function OrdemServicoList({
                         <button
                           onClick={() => {
                             if (isReadOnly) {
-                              onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                              onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Exclusão de OS suspensa.");
                               return;
                             }
                             setDeleteConfirm({

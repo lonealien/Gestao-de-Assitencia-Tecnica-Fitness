@@ -6,8 +6,24 @@ import { AppUser } from '../types';
 
 type ChatRecipient = { id: string; name: string; role: string; lastSeen?: number } | 'GERAL';
 
-export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
+export default function ChatBox({ 
+  currentUser,
+  isExpired,
+  onShowBlockedAlert
+}: { 
+  currentUser: AppUser;
+  isExpired?: boolean;
+  onShowBlockedAlert?: (msg: string) => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const toggleChat = () => {
+    if (!isOpen && isExpired) {
+      onShowBlockedAlert?.("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. O chat está temporariamente suspenso.");
+      return;
+    }
+    setIsOpen(!isOpen);
+  };
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
@@ -632,7 +648,7 @@ export default function ChatBox({ currentUser }: { currentUser: AppUser }) {
       )}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggleChat}
           className="bg-blue-600 text-white p-3 rounded-full shadow-2xl hover:bg-blue-700 transition-all flex items-center justify-center hover:scale-110 active:scale-90 relative w-14 h-14 ring-4 ring-white/10 dark:ring-black/10"
           title="Chat com usuários da empresa"
         >

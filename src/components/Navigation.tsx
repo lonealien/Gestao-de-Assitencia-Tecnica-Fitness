@@ -17,6 +17,8 @@ interface NavigationProps {
   setIsMobileMenuOpen: (open: boolean) => void;
   isHeaderMinimized: boolean;
   handleMobileMenuToggle: () => void;
+  isExpired?: boolean;
+  onShowBlockedAlert?: (msg: string) => void;
 }
 
 export default function Navigation({
@@ -32,8 +34,19 @@ export default function Navigation({
   isMobileMenuOpen,
   setIsMobileMenuOpen,
   isHeaderMinimized,
-  handleMobileMenuToggle
+  handleMobileMenuToggle,
+  isExpired,
+  onShowBlockedAlert
 }: NavigationProps) {
+  const handleAction = (tab: 'dashboard' | 'ordens' | 'usuarios', checkExpired = false) => {
+    if (checkExpired && isExpired) {
+      onShowBlockedAlert?.("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador.");
+      return;
+    }
+    setActiveTab(tab);
+    onShowAddOSForm();
+    setIsMobileMenuOpen(false);
+  };
   return (
     <header className="sticky top-0 z-40 bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 shadow-sm dark:shadow-none">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -75,7 +88,7 @@ export default function Navigation({
             <nav className="flex flex-col lg:flex-row gap-2">
               {loggedUser.role !== 'TECNICO' && (
                 <button
-                  onClick={() => { setActiveTab('dashboard'); onShowAddOSForm(); setIsMobileMenuOpen(false); }}
+                  onClick={() => handleAction('dashboard')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider border border-neutral-200 dark:border-neutral-700 transition-all cursor-pointer ${
                     activeTab === 'dashboard'
                       ? 'bg-yellow-300 dark:bg-yellow-400 text-neutral-900 shadow-sm dark:shadow-none'
@@ -88,7 +101,7 @@ export default function Navigation({
               )}
 
               <button
-                onClick={() => { setActiveTab('ordens'); onShowAddOSForm(); setIsMobileMenuOpen(false); }}
+                onClick={() => handleAction('ordens')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider border border-neutral-200 dark:border-neutral-700 transition-all cursor-pointer ${
                   activeTab === 'ordens'
                     ? 'bg-yellow-300 dark:bg-yellow-400 text-neutral-900 shadow-sm dark:shadow-none'
@@ -101,7 +114,7 @@ export default function Navigation({
 
               {(loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE') && (
                 <button
-                  onClick={() => { setActiveTab('usuarios'); onShowAddOSForm(); setIsMobileMenuOpen(false); }}
+                  onClick={() => handleAction('usuarios', true)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider border border-neutral-200 dark:border-neutral-700 transition-all cursor-pointer ${
                     activeTab === 'usuarios'
                       ? 'bg-yellow-300 dark:bg-yellow-400 text-neutral-900 shadow-sm dark:shadow-none'
