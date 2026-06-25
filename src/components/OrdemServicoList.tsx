@@ -3,7 +3,7 @@ import { OrdemServico, AssistenciaTecnica, Tecnico, OSStatus, OSHistory, UserRol
 import { 
   Search, Filter, Eye, Hammer, ClipboardCheck, Clock, AlertTriangle, 
   User, CheckCircle, Ban, MessageSquarePlus, PenTool, Check, MapPin, 
-  Sparkles, ShieldAlert, History, Plus, Trash2, FileText, Download, Image as ImageIcon, ExternalLink, Navigation, DollarSign, Camera, X, ChevronDown, ChevronUp
+  Sparkles, ShieldAlert, History, Plus, Trash2, FileText, Download, Image as ImageIcon, ExternalLink, Navigation, DollarSign, Camera, X, ChevronDown, ChevronUp, Banknote
 } from 'lucide-react';
 import { toJpeg } from 'html-to-image';
 import jsPDF from 'jspdf';
@@ -81,7 +81,7 @@ export default function OrdemServicoList({
   // Agenda / Visit Date Filters for Technical role
   const [dateAgendaFilter, setDateAgendaFilter] = useState<'Todos' | 'Hoje' | 'Específica'>('Hoje');
   const [specificDate, setSpecificDate] = useState<string>('');
-  const [showTodayCompleted, setShowTodayCompleted] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   // For adding history/updates
   const [newStatus, setNewStatus] = useState<OSStatus | ''>('');
@@ -100,6 +100,7 @@ export default function OrdemServicoList({
   const [assigneeTecnicoId, setAssigneeTecnicoId] = useState<string>('');
   const [editScheduledVisitDate, setEditScheduledVisitDate] = useState<string>('');
   const [editCompletionDate, setEditCompletionDate] = useState<string>('');
+  const [editPaymentMethod, setEditPaymentMethod] = useState<OrdemServico['paymentMethod'] | ''>('');
 
   // Signature states for editing OS
   const [sigTecnicoAberturaInput, setSigTecnicoAberturaInput] = useState<string>('');
@@ -178,6 +179,7 @@ export default function OrdemServicoList({
         if (os.tecnicoId) setAssigneeTecnicoId(os.tecnicoId);
         setEditScheduledVisitDate(os.scheduledVisitDate || '');
         setEditCompletionDate(os.completionDate || '');
+        setEditPaymentMethod(os.paymentMethod || '');
 
         // Signatures state initialization
         setSigTecnicoAberturaInput(os.sigTecnicoAbertura || '');
@@ -240,11 +242,10 @@ export default function OrdemServicoList({
   if (currentRole === 'ASSISTENCIA_GERENTE' && activeRoleEntityId) {
     scopedOrdens = ordens.filter(o => o.assistenciaId === activeRoleEntityId);
   } else if (currentRole === 'TECNICO' && activeRoleEntityId) {
-    if (showTodayCompleted) {
+    if (showCompleted) {
       scopedOrdens = ordens.filter(o => 
         o.tecnicoId === activeRoleEntityId && 
-        o.status === 'Finalizada' &&
-        o.completionDate === todayStr
+        o.status === 'Finalizada'
       );
     } else {
       scopedOrdens = ordens.filter(o => 
@@ -344,8 +345,9 @@ export default function OrdemServicoList({
 
     const hasCompletionDateChanged = finalCompletionDate !== (os.completionDate || '');
     const hasStatusChanged = appliedStatus !== os.status;
+    const hasPaymentMethodChanged = editPaymentMethod !== (os.paymentMethod || '');
 
-    if (!hasStatusChanged && !hasFieldsChanged && (costInput === '') && !hasVisitDateChanged && !hasCompletionDateChanged && !hasSigsChanged && !hasFotosChanged) {
+    if (!hasStatusChanged && !hasFieldsChanged && (costInput === '') && !hasVisitDateChanged && !hasCompletionDateChanged && !hasSigsChanged && !hasFotosChanged && !hasPaymentMethodChanged) {
       alert('Por favor, informe alguma alteração para atualizar a ordem de serviço.');
       return;
     }
@@ -360,6 +362,16 @@ export default function OrdemServicoList({
         date: dateFormatted,
         status: os.status,
         description: `Data de atendimento alterada para ${editScheduledVisitDate.split('-').reverse().join('/')}`,
+        author: activeUserName
+      });
+    }
+
+    if (hasPaymentMethodChanged) {
+      updatedOS.paymentMethod = editPaymentMethod || undefined;
+      historyEntries.push({
+        date: dateFormatted,
+        status: os.status,
+        description: `Forma de pagamento atualizada para: ${editPaymentMethod || 'Não informada'}`,
         author: activeUserName
       });
     }
@@ -538,6 +550,7 @@ export default function OrdemServicoList({
     setAssigneeTecnicoId('');
     setEditScheduledVisitDate('');
     setEditCompletionDate('');
+    setEditPaymentMethod('');
     
     // Clear signature drafts
     setSigTecnicoAberturaInput('');
@@ -724,32 +737,32 @@ export default function OrdemServicoList({
     <div className="space-y-6">
 
       {/* Agenda Quick Navigation or Technician Info Banner */}
-      {currentRole === 'TECNICO' ? (
+      {currentRole === 'TECNICO' && (
         <div className="bg-emerald-50 dark:bg-neutral-800/60 border-2 border-emerald-500/30 p-5 shadow-sm rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <span className="text-3xl shrink-0 select-none">🛠️</span>
             <div>
               <h4 className="text-sm font-black uppercase text-neutral-900 dark:text-neutral-100 tracking-wider">
-                {showTodayCompleted ? 'Ordens Finalizadas Hoje' : 'Suas Atribuições de Hoje'}
+                {showCompleted ? 'Ordens Finalizadas' : 'Suas Atribuições Pendentes'}
               </h4>
               <p className="text-xs text-neutral-600 dark:text-neutral-400 font-bold uppercase mt-1 leading-snug">
-                {showTodayCompleted 
-                  ? `Exibindo ordens que você finalizou hoje (${new Date().toLocaleDateString('pt-BR')}).`
-                  : `Exibindo ordens pendentes ou agendadas para hoje (${new Date().toLocaleDateString('pt-BR')}).`
+                {showCompleted 
+                  ? `Exibindo ordens que você já finalizou.`
+                  : `Exibindo ordens pendentes ou agendadas para você.`
                 }
               </p>
             </div>
           </div>
           
           <button
-            onClick={() => setShowTodayCompleted(!showTodayCompleted)}
+            onClick={() => setShowCompleted(!showCompleted)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none border-2 border-black ${
-              showTodayCompleted 
+              showCompleted 
                 ? 'bg-neutral-900 text-white' 
                 : 'bg-emerald-400 text-neutral-900 hover:bg-emerald-500'
             }`}
           >
-            {showTodayCompleted ? (
+            {showCompleted ? (
               <>
                 <Hammer className="w-4 h-4" />
                 Ver Pendentes
@@ -757,13 +770,15 @@ export default function OrdemServicoList({
             ) : (
               <>
                 <CheckCircle className="w-4 h-4" />
-                Ver Concluídas de Hoje
+                Ver Concluídas
               </>
             )}
           </button>
         </div>
-      ) : (
-        <div className="bg-neutral-100 dark:bg-neutral-800/40 border-2 border-neutral-200 dark:border-neutral-700 p-5 shadow-sm dark:shadow-none space-y-3 rounded-2xl">
+      )}
+      
+      {/* Agenda & Atendimentos Diários (Available for all roles now) */}
+      <div className="bg-neutral-100 dark:bg-neutral-800/40 border-2 border-neutral-200 dark:border-neutral-700 p-5 shadow-sm dark:shadow-none space-y-3 rounded-2xl">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-neutral-200 dark:border-neutral-700 pb-2 gap-2">
             <h4 className="text-sm font-black uppercase text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
               <Clock className="w-5 h-5 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" />
@@ -819,7 +834,6 @@ export default function OrdemServicoList({
             {dateAgendaFilter === 'Específica' && specificDate && `📅 Filtrando visitas agendadas para o dia: ${new Date(specificDate + 'T00:00:00').toLocaleDateString('pt-BR')}`}
           </div>
         </div>
-      )}
       
       {/* Search and Filters Hub */}
       {currentRole !== 'TECNICO' && (
@@ -948,24 +962,35 @@ export default function OrdemServicoList({
                                 </span>
                               </div>
 
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-xs font-black">
-                                {visitDate && (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-neutral-500 uppercase tracking-widest font-black text-[10px]">Agendado para:</span>
-                                    <span className="px-3 py-1.5 border-2 border-black dark:border-neutral-700 rounded-2xl font-black text-sm font-mono bg-amber-300 text-neutral-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-                                      {visitDate.split('-').reverse().join('/')}
-                                    </span>
-                                  </div>
-                                )}
-                                
-                                {compDate && (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-neutral-500 uppercase tracking-widest font-black text-[10px]">Finalizado em:</span>
-                                    <span className="px-3 py-1.5 border-2 border-neutral-900 dark:border-neutral-200 rounded-2xl font-black text-sm font-mono bg-emerald-300 text-neutral-900 shadow-[3px_3px_0px_0px_rgba(16,185,129,0.3)]">
-                                      {compDate.split('-').reverse().join('/')}
-                                    </span>
-                                  </div>
-                                )}
+                              <div className="flex flex-col gap-3 text-xs font-black sm:items-end">
+                                <div className="flex flex-wrap items-center gap-3">
+                                  {os.createdAt && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-neutral-500 uppercase tracking-widest font-black text-[10px]">Data de Chamado:</span>
+                                      <span className="px-3 py-1.5 border-2 border-neutral-900 dark:border-neutral-200 rounded-2xl font-black text-sm font-mono bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,1)]">
+                                        {safeFormatDate(os.createdAt)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  
+                                  {visitDate && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-neutral-500 uppercase tracking-widest font-black text-[10px]">Data de Atendimento:</span>
+                                      <span className="px-3 py-1.5 border-2 border-black dark:border-neutral-700 rounded-2xl font-black text-sm font-mono bg-amber-300 text-neutral-900 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                                        {visitDate.split('-').reverse().join('/')}
+                                      </span>
+                                    </div>
+                                  )}
+                                  
+                                  {compDate && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-neutral-500 uppercase tracking-widest font-black text-[10px]">Data de Conclusão:</span>
+                                      <span className="px-3 py-1.5 border-2 border-neutral-900 dark:border-neutral-200 rounded-2xl font-black text-sm font-mono bg-emerald-300 text-neutral-900 shadow-[3px_3px_0px_0px_rgba(16,185,129,0.3)]">
+                                        {compDate.split('-').reverse().join('/')}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           )}
@@ -1192,6 +1217,7 @@ export default function OrdemServicoList({
                             setAssigneeTecnicoId(os.tecnicoId || '');
                             setEditScheduledVisitDate(os.scheduledVisitDate || '');
                             setEditCompletionDate(os.completionDate || '');
+                            setEditPaymentMethod(os.paymentMethod || '');
                             
                             // Load signatures
                             setSigTecnicoAberturaInput(os.sigTecnicoAbertura || '');
@@ -1357,7 +1383,16 @@ export default function OrdemServicoList({
                             )}
                           </div>
 
-                          <div className="grid grid-cols-1 gap-3.5">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-4">
+                            <div>
+                              <label className="block text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-1.5">Data de Chamado (Abertura)</label>
+                              <input
+                                type="date"
+                                value={os.createdAt ? os.createdAt.split('T')[0] : ''}
+                                disabled
+                                className="w-full border border-neutral-200 dark:border-neutral-700 rounded-2xl p-2 text-xs font-bold text-neutral-500 bg-neutral-50 dark:bg-neutral-800 focus:outline-none cursor-not-allowed"
+                              />
+                            </div>
                             <div>
                               <label htmlFor={`edit-visit-${os.id}`} className="block text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-1.5">Data de Atendimento (Início)</label>
                               <input
@@ -1365,8 +1400,7 @@ export default function OrdemServicoList({
                                 type="date"
                                 value={editScheduledVisitDate}
                                 onChange={(e) => setEditScheduledVisitDate(e.target.value)}
-                                disabled={currentRole === 'TECNICO'}
-                                className={`w-full border border-neutral-200 dark:border-neutral-700 rounded-2xl p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 focus:outline-none ${currentRole === 'TECNICO' ? 'opacity-70 bg-neutral-100 cursor-not-allowed' : ''}`}
+                                className="w-full border border-neutral-200 dark:border-neutral-700 rounded-2xl p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 focus:outline-none"
                               />
                             </div>
                           </div>
@@ -1626,6 +1660,32 @@ export default function OrdemServicoList({
                                     onChange={(e) => setEditCompletionDate(e.target.value)}
                                     className="w-full border border-neutral-200 dark:border-neutral-700 p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none"
                                   />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="bg-white dark:bg-neutral-800 border-2 border-dashed border-neutral-400 p-4 rounded-2xl space-y-3">
+                              <span className="block text-xs font-black uppercase text-neutral-900 dark:text-neutral-100 tracking-wider flex items-center gap-1">
+                                <Banknote className="w-4 h-4" />
+                                Forma de Pagamento
+                              </span>
+                              
+                              <div className="grid grid-cols-1 gap-4">
+                                <div>
+                                  <label className="block text-[11px] font-black uppercase text-neutral-700 mb-1">
+                                    Método de Pagamento para Recibo
+                                  </label>
+                                  <select
+                                    value={editPaymentMethod}
+                                    onChange={(e) => setEditPaymentMethod(e.target.value as any)}
+                                    className="w-full border border-neutral-200 dark:border-neutral-700 p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                                  >
+                                    <option value="">Selecione a forma de pagamento...</option>
+                                    <option value="Pix/À vista">Pix / À vista</option>
+                                    <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                    <option value="Cartão de Débito">Cartão de Débito</option>
+                                    <option value="Boleto">Boleto</option>
+                                  </select>
                                 </div>
                               </div>
                             </div>
@@ -1981,7 +2041,7 @@ export default function OrdemServicoList({
                     <span className="text-[8px] font-semibold bg-emerald-600 text-white px-1.5 py-0.5 uppercase tracking-widest">Pago / Quitado</span>
                   </div>
                   <p className="text-[9.2px] font-bold text-neutral-800 leading-relaxed text-justify">
-                    Declaramos que o serviço especificado nesta Ordem de Serviço foi concluído e testado. Confirmamos o recebimento e a quitação integral do valor de <strong className="font-extrabold uppercase text-emerald-900 text-[10px]">R$ {(osToExport.totalCostValue || 0).toFixed(2)}</strong> pago à Assistência Técnica / Técnico Responsável, sendo dado com este instrumento plena e geral quitação de direitos pelo reparo do equipamento, validado pelas assinaturas registradas abaixo.
+                    Declaramos que o serviço especificado nesta Ordem de Serviço foi concluído e testado. Confirmamos o recebimento e a quitação integral do valor de <strong className="font-extrabold uppercase text-emerald-900 text-[10px]">R$ {(osToExport.totalCostValue || 0).toFixed(2)}</strong> pago à Assistência Técnica / Técnico Responsável{osToExport.paymentMethod ? ` através da forma de pagamento: ${osToExport.paymentMethod}` : ''}, sendo dado com este instrumento plena e geral quitação de direitos pelo reparo do equipamento, validado pelas assinaturas registradas abaixo.
                   </p>
                 </div>
               )}

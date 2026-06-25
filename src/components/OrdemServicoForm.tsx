@@ -383,7 +383,7 @@ export default function OrdemServicoForm({
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="scheduledVisitDate" className="block text-[11px] font-black uppercase text-neutral-900 dark:text-neutral-100 mb-1 font-mono">Data para Primeiro Atendimento</label>
+                <label htmlFor="scheduledVisitDate" className="block text-[11px] font-black uppercase text-neutral-900 dark:text-neutral-100 mb-1 font-mono">Data de Atendimento</label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-3 w-4 h-4 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" />
                   <input

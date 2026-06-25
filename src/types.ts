@@ -91,6 +91,7 @@ export interface OrdemServico {
   fotosAntes?: string[];
   fotosDepois?: string[];
   fotos?: OSPhoto[];
+  paymentMethod?: 'Pix/À vista' | 'Cartão de Crédito' | 'Cartão de Débito' | 'Boleto';
 }
 
 export interface StoreSettings {
