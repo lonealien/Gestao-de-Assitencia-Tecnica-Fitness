@@ -20,6 +20,7 @@ import SettingsModal from './components/SettingsModal';
 import MasterDashboard from './components/MasterDashboard';
 import ChatBox from './components/ChatBox';
 import BlockedAccessModal from './components/BlockedAccessModal';
+import Navigation from './components/Navigation';
 
 import { 
   Building2, ClipboardList, LayoutDashboard, Dumbbell, 
@@ -471,140 +472,24 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-100 antialiased flex flex-col justify-between transition-colors duration-200 placeholder-neutral-500 dark:placeholder-neutral-400 dark:placeholder-neutral-500">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-100 antialiased flex flex-col justify-between transition-colors duration-200">
       
-      {/* Main platform header navigation */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 shadow-sm dark:shadow-none">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className={`flex flex-col lg:flex-row lg:items-center lg:justify-between ${isHeaderMinimized ? 'py-1.5' : 'py-4'} lg:py-0 lg:h-20 gap-4`}>
-            
-            {/* Branding Logo */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {activeStoreSettings.logoUrl ? (
-                  <img src={activeStoreSettings.logoUrl} alt={activeStoreSettings.name} className={`${isHeaderMinimized ? 'h-6 w-6' : 'h-10 w-10'} object-contain border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-lg transition-all`} />
-                ) : (
-                  <div className={`bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 ${isHeaderMinimized ? 'p-1.5 rounded-lg' : 'p-2.5 rounded-2xl'} border border-neutral-200 dark:border-neutral-700 shadow-sm dark:shadow-none transition-all`}>
-                    <Dumbbell className={`${isHeaderMinimized ? 'w-4 h-4' : 'w-6 h-6'} rotate-45 text-yellow-300 stroke-[2.5]`} />
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <div>
-                    <span className={`font-black text-neutral-900 dark:text-neutral-100 ${isHeaderMinimized ? 'text-sm' : 'text-xl'} uppercase tracking-tight block max-w-[150px] sm:max-w-[200px] truncate transition-all`} title={activeStoreSettings.name}>{activeStoreSettings.name}</span>
-                    <span className="text-[10px] text-neutral-500 block leading-none font-black uppercase tracking-wider">{loggedUser.name}</span>
-                  </div>
-                  {(loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE') && !isHeaderMinimized && (
-                    <button 
-                      onClick={() => setShowSettings(true)}
-                      className="p-1.5 text-neutral-400 hover:text-neutral-900 dark:text-neutral-100 hover:bg-neutral-100 transition-colors"
-                      title={loggedUser.role === 'ADMIN' ? "Configurações Globais" : "Configurações da Assistência"}
-                    >
-                      <SettingsIcon className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-              </div>
+      <Navigation
+        loggedUser={loggedUser}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isDarkMode={isDarkMode}
+        setIsDarkMode={setIsDarkMode}
+        onLogout={() => { setLoggedUser(null); localStorage.removeItem('logged_user_fitness'); }}
+        onShowSettings={() => setShowSettings(true)}
+        onShowAddOSForm={() => setShowAddOSForm(false)}
+        activeStoreSettings={activeStoreSettings}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+        isHeaderMinimized={isHeaderMinimized}
+        handleMobileMenuToggle={handleMobileMenuToggle}
+      />
 
-              {/* Mobile controls */}
-              <div className="flex items-center gap-2 lg:hidden">
-                <button 
-                  onClick={handleMobileMenuToggle}
-                  className="p-2 text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 rounded-xl"
-                >
-                  {isMobileMenuOpen ? <Plus className="w-6 h-6 rotate-45" /> : <ClipboardList className="w-6 h-6" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Navigation Link Tabs */}
-            <div className={`${isMobileMenuOpen ? 'flex' : 'hidden'} lg:flex flex-col lg:flex-row lg:items-center gap-4 transition-all`}>
-              <nav className="flex flex-col lg:flex-row gap-2" aria-label="Navegação Principal">
-                {loggedUser.role !== 'TECNICO' && (
-                  <button
-                    onClick={() => {
-                      setActiveTab('dashboard');
-                      setShowAddOSForm(false);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider border border-neutral-200 dark:border-neutral-700 transition-all cursor-pointer ${
-                      activeTab === 'dashboard' && !showAddOSForm
-                        ? 'bg-yellow-300 dark:bg-yellow-400 text-neutral-900 shadow-sm dark:shadow-none'
-                        : 'bg-white dark:bg-neutral-800 hover:bg-neutral-100 text-neutral-900 dark:text-neutral-100'
-                    }`}
-                  >
-                    <LayoutDashboard className="w-4 h-4 stroke-[2.5]" />
-                    Painel
-                  </button>
-                )}
-
-                <button
-                  onClick={() => {
-                    setActiveTab('ordens');
-                    setShowAddOSForm(false);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider border border-neutral-200 dark:border-neutral-700 transition-all cursor-pointer ${
-                    activeTab === 'ordens' && !showAddOSForm
-                      ? 'bg-yellow-300 dark:bg-yellow-400 text-neutral-900 shadow-sm dark:shadow-none'
-                      : 'bg-white dark:bg-neutral-800 hover:bg-neutral-100 text-neutral-900 dark:text-neutral-100'
-                    }`}
-                >
-                  <ClipboardList className="w-4 h-4 stroke-[2.5]" />
-                  {loggedUser.role === 'TECNICO' ? 'Minhas OS & Agenda' : 'Ordens (OS)'}
-                </button>
-
-                {(loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE') && (
-                  <button
-                    onClick={() => {
-                      setActiveTab('usuarios');
-                      setShowAddOSForm(false);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider border border-neutral-200 dark:border-neutral-700 transition-all cursor-pointer ${
-                      activeTab === 'usuarios' && !showAddOSForm
-                        ? 'bg-yellow-300 dark:bg-yellow-400 text-neutral-900 shadow-sm dark:shadow-none'
-                        : 'bg-white dark:bg-neutral-800 hover:bg-neutral-100 text-neutral-900 dark:text-neutral-100'
-                    }`}
-                  >
-                    <Users className="w-4 h-4 stroke-[2.5]" />
-                    Usuários / Acessos
-                  </button>
-                )}
-              </nav>
-
-              {/* Logged user context & Logout & Theme Toggle */}
-              <div className="flex items-center justify-between lg:justify-end gap-2 lg:border-l-2 lg:border-black lg:pl-4 mt-2 lg:mt-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-neutral-200 dark:border-neutral-700">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setIsDarkMode(!isDarkMode)}
-                    className="bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 p-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm dark:shadow-none hover:shadow-md transition-all cursor-pointer flex items-center justify-center placeholder-neutral-500 dark:placeholder-neutral-400"
-                    title="Alternar Tema Escuro"
-                  >
-                    {isDarkMode ? <Sun className="w-4 h-4 stroke-[3]" /> : <Moon className="w-4 h-4 stroke-[3]" />}
-                  </button>
-                  <div className="text-left lg:text-right ml-1">
-                    <span className="text-[9px] text-neutral-500 block leading-none font-black uppercase">Conta Ativa</span>
-                    <span className="text-xs font-black uppercase text-neutral-900 dark:text-neutral-100 max-w-[120px] truncate block" title={loggedUser?.username}>{loggedUser?.username}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setLoggedUser(null);
-                    localStorage.removeItem('logged_user_fitness');
-                  }}
-                  className="bg-rose-500 hover:bg-rose-600 text-white p-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm dark:shadow-none hover:shadow-md transition-all cursor-pointer flex items-center gap-1 text-[10px] uppercase font-black"
-                  title="Sair do Sistema (Logout)"
-                >
-                  <LogOut className="w-3.5 h-3.5 stroke-[3]" />
-                  <span>Sair</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Layout Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {isExpired && (
