@@ -26,6 +26,7 @@ export default function OrdemServicoForm({
   const [clientZipCode, setClientZipCode] = useState('');
   const [clientCity, setClientCity] = useState('');
   const [clientState, setClientState] = useState('');
+  const [isFetchingCep, setIsFetchingCep] = useState(false);
   const [equipmentType, setEquipmentType] = useState<OrdemServico['equipmentType']>('Esteira');
   const [equipmentBrand, setEquipmentBrand] = useState('');
   const [equipmentModel, setEquipmentModel] = useState('');
@@ -69,6 +70,34 @@ export default function OrdemServicoForm({
 
   const removePart = (index: number) => {
     setParts(parts.filter((_, i) => i !== index));
+  };
+
+  const fetchAddressByCep = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+    
+    setIsFetchingCep(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+      if (!data.erro) {
+        setAddress(data.logradouro + (data.bairro ? ` - ${data.bairro}` : ''));
+        setClientCity(data.localidade);
+        setClientState(data.uf);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar CEP:", error);
+    } finally {
+      setIsFetchingCep(false);
+    }
+  };
+
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = maskCEP(e.target.value);
+    setClientZipCode(value);
+    if (value.replace(/\D/g, '').length === 8) {
+      fetchAddressByCep(value);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -215,14 +244,17 @@ export default function OrdemServicoForm({
               </div>
             </div>
             <div>
-              <label htmlFor="clientZipCode" className="block text-[11px] font-black uppercase text-neutral-900 dark:text-neutral-100 mb-1">CEP</label>
+              <label htmlFor="clientZipCode" className="block text-[11px] font-black uppercase text-neutral-900 dark:text-neutral-100 mb-1">
+                CEP {isFetchingCep && <span className="text-emerald-500 ml-1 animate-pulse">(Buscando...)</span>}
+              </label>
               <input
                 id="clientZipCode"
                 type="text"
                 placeholder="00000-000"
                 value={clientZipCode}
-                onChange={(e) => setClientZipCode(maskCEP(e.target.value))}
-                className="w-full border border-neutral-200 dark:border-neutral-700 rounded-2xl px-3 py-2 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:bg-neutral-50 text-sm font-bold"
+                onChange={handleCepChange}
+                className={`w-full border border-neutral-200 dark:border-neutral-700 rounded-2xl px-3 py-2 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none focus:bg-neutral-50 text-sm font-bold ${isFetchingCep ? 'opacity-70' : ''}`}
+                disabled={isFetchingCep}
               />
             </div>
           </div>
