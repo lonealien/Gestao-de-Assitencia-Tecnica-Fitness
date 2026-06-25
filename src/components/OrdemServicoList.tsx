@@ -1210,7 +1210,7 @@ export default function OrdemServicoList({
                             }
                             setEditFotos(allFotos);
                           }}
-                          className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 text-white dark:text-neutral-900 px-3.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm dark:shadow-none hover:shadow-md transition-all inline-flex items-center gap-1.5 cursor-pointer w-full justify-center"
+                          className={`bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 text-white dark:text-neutral-900 px-3.5 py-2 border border-neutral-200 dark:border-neutral-700 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm dark:shadow-none hover:shadow-md transition-all inline-flex items-center gap-1.5 cursor-pointer w-full justify-center ${isReadOnly ? 'opacity-50 grayscale' : ''}`}
                         >
                           <Hammer className="w-4 h-4 stroke-[2.5]" />
                           Editar OS

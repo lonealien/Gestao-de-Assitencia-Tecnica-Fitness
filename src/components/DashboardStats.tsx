@@ -578,13 +578,13 @@ export default function DashboardStats({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (isReadOnly && currentRole !== 'ADMIN') {
-                                  onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura.");
+                                if (isReadOnly) {
+                                  onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição de OS suspensa.");
                                   return;
                                 }
                                 onEditOS(o.id);
                               }}
-                              className="bg-yellow-300 hover:bg-yellow-400 text-neutral-900 dark:text-neutral-100 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 flex items-center gap-1 cursor-pointer transition-all active:translate-x-0.5"
+                              className={`bg-yellow-300 hover:bg-yellow-400 text-neutral-900 dark:text-neutral-100 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 flex items-center gap-1 cursor-pointer transition-all active:translate-x-0.5 ${isReadOnly ? 'opacity-50 grayscale' : ''}`}
                               title="Editar OS Diretamente"
                             >
                               <Hammer className="w-3.5 h-3.5" />
@@ -735,13 +735,17 @@ export default function DashboardStats({
 
             {/* Modal Actions Footer */}
             <div className="bg-neutral-100 border-t-2 border-black p-4 flex justify-end gap-2">
-              {onEditOS && (!isReadOnly || currentRole === 'ADMIN') && (
+              {onEditOS && (
                 <button
                   onClick={() => {
+                    if (isReadOnly) {
+                      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição de OS suspensa.");
+                      return;
+                    }
                     onEditOS(selectedOS.id);
                     setSelectedOS(null);
                   }}
-                  className="bg-yellow-300 hover:bg-yellow-400 text-neutral-900 dark:text-neutral-100 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm dark:shadow-none hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                  className={`bg-yellow-300 hover:bg-yellow-400 text-neutral-900 dark:text-neutral-100 text-xs font-black uppercase tracking-wider px-5 py-2.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm dark:shadow-none hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5 ${isReadOnly ? 'opacity-50 grayscale' : ''}`}
                 >
                   <Hammer className="w-4 h-4 stroke-[3]" />
                   Editar OS

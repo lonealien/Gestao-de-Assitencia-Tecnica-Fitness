@@ -71,6 +71,10 @@ export default function UserManagement({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleManualBackup = async () => {
+    if (currentUser.isReadOnly) {
+      onShowBlockedAlert?.("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Backup suspenso.");
+      return;
+    }
     if (!currentUser.assistenciaId) return;
     setBackupStatus('loading');
     try {
@@ -87,6 +91,10 @@ export default function UserManagement({
   };
 
   const handleRestoreClick = () => {
+    if (currentUser.isReadOnly) {
+      onShowBlockedAlert?.("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Restauração de backup suspensa.");
+      return;
+    }
     fileInputRef.current?.click();
   };
 
@@ -331,7 +339,7 @@ export default function UserManagement({
           <button
             onClick={() => {
               if (currentUser.isReadOnly) {
-                onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Cadastro de novos usuários suspenso.");
                 return;
               }
               setActiveForm(!activeForm);
@@ -376,7 +384,7 @@ export default function UserManagement({
               <button
                 onClick={handleManualBackup}
                 disabled={backupStatus === 'loading'}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-[10px] font-black uppercase tracking-widest py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className={`w-full ${currentUser.isReadOnly ? 'bg-neutral-400 opacity-70' : 'bg-blue-600 hover:bg-blue-700'} text-white text-[10px] font-black uppercase tracking-widest py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer`}
               >
                 {backupStatus === 'loading' ? 'Gerando...' : <><Download className="w-3.5 h-3.5" /> Fazer Backup Agora</>}
               </button>
@@ -394,7 +402,7 @@ export default function UserManagement({
               />
               <button
                 onClick={handleRestoreClick}
-                className="w-full bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-[10px] font-black uppercase tracking-widest py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className={`w-full ${currentUser.isReadOnly ? 'bg-neutral-400 opacity-70' : 'bg-neutral-900 dark:bg-neutral-100'} text-white dark:text-neutral-900 text-[10px] font-black uppercase tracking-widest py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer`}
               >
                 <Upload className="w-3.5 h-3.5" /> Carregar Backup
               </button>
@@ -854,7 +862,7 @@ export default function UserManagement({
                                   type="button"
                                   onClick={() => {
                                     if (currentUser.isReadOnly) {
-                                      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição de usuários suspensa.");
                                       return;
                                     }
                                     setEditingUserId(u.id);
@@ -879,7 +887,7 @@ export default function UserManagement({
                                   type="button"
                                   onClick={() => {
                                     if (currentUser.isReadOnly) {
-                                      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Alteração de permissões suspensa.");
                                       return;
                                     }
                                     setEditingUserId(u.id);
@@ -904,7 +912,7 @@ export default function UserManagement({
                                 type="button"
                                 onClick={() => {
                                   if (currentUser.isReadOnly) {
-                                    onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                    onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Ativação/Desativação de conta suspensa.");
                                     return;
                                   }
                                   onToggleUserActive(u.id);
@@ -920,7 +928,7 @@ export default function UserManagement({
                                   type="button"
                                   onClick={() => {
                                     if (currentUser.isReadOnly) {
-                                      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: O painel está em modo leitura ou a assinatura está expirada.");
+                                      onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Exclusão de usuário suspensa.");
                                       return;
                                     }
                                     setDeleteConfirm({
@@ -1019,6 +1027,10 @@ export default function UserManagement({
                           {(currentUser.role === 'ADMIN' || currentUser.role === 'ASSISTENCIA_GERENTE') && (
                             <button
                               onClick={() => {
+                                if (currentUser.isReadOnly) {
+                                  onShowBlockedAlert?.("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição de usuários suspensa.");
+                                  return;
+                                }
                                 setEditingUserId(u.id);
                                 setEditName(u.name);
                                 setEditEmail(u.email);
@@ -1026,7 +1038,7 @@ export default function UserManagement({
                                 setEditRole(u.role);
                                 setEditPhone(u.phone || '');
                               }}
-                              className="p-2 bg-amber-100 text-amber-700 rounded-xl"
+                              className={`p-2 ${currentUser.isReadOnly ? 'bg-neutral-100 text-neutral-400' : 'bg-amber-100 text-amber-700'} rounded-xl`}
                             >
                               <Pencil className="w-4 h-4" />
                             </button>
@@ -1034,7 +1046,13 @@ export default function UserManagement({
                           
                           {(currentUser.role === 'ADMIN' || currentUser.role === 'ASSISTENCIA_GERENTE') && (
                             <button
-                              onClick={() => onToggleUserActive(u.id)}
+                              onClick={() => {
+                                if (currentUser.isReadOnly) {
+                                  onShowBlockedAlert?.("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Ativação/Desativação de conta suspensa.");
+                                  return;
+                                }
+                                onToggleUserActive(u.id);
+                              }}
                               className={`p-2 ${u.active ? 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400' : 'bg-rose-100 text-rose-600'} rounded-xl transition-colors`}
                             >
                               {u.active ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
@@ -1042,6 +1060,10 @@ export default function UserManagement({
                           )}
                           <button
                             onClick={() => {
+                              if (currentUser.isReadOnly) {
+                                onShowBlockedAlert?.("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Exclusão de usuário suspensa.");
+                                return;
+                              }
                               setDeleteConfirm({
                                 title: "Confirmar Exclusão de Usuário",
                                 message: `Deseja realmente excluir permanentemente o usuário "${u.name}"?\n\nDigite a senha para confirmar:`,
