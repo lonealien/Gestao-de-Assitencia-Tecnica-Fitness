@@ -50,6 +50,20 @@
       "name": "string",
       "currency": "string",
       "logoUrl": "string?"
+    },
+    "clients": {
+      "id": "string",
+      "name": "string",
+      "document": "string",
+      "phone": "string",
+      "email": "string",
+      "zipCode": "string?",
+      "address": "string",
+      "city": "string?",
+      "state": "string?",
+      "assistenciaId": "string",
+      "createdAt": "string",
+      "updatedAt": "string"
     }
   }
 }

@@ -175,10 +175,24 @@ export default function UserManagement({
       password: editPassword.trim(),
       role: editRole,
       isReadOnly: editIsReadOnly,
-      phone: editPhone.trim(),
-      assistenciaId: (editRole === 'TECNICO' || editRole === 'ATENDENTE' || editRole === 'ASSISTENCIA_GERENTE') ? (editAssistenciaId || u.assistenciaId || undefined) : undefined,
-      tecnicoId: editRole === 'TECNICO' ? (editTecnicoId || u.tecnicoId || undefined) : undefined,
+      phone: editPhone.trim()
     };
+
+    if (editRole === 'TECNICO' || editRole === 'ATENDENTE' || editRole === 'ASSISTENCIA_GERENTE') {
+      if (editAssistenciaId || u.assistenciaId) {
+        updatedUser.assistenciaId = editAssistenciaId || u.assistenciaId;
+      }
+    } else {
+      delete updatedUser.assistenciaId;
+    }
+
+    if (editRole === 'TECNICO') {
+      if (editTecnicoId || u.tecnicoId) {
+        updatedUser.tecnicoId = editTecnicoId || u.tecnicoId;
+      }
+    } else {
+      delete updatedUser.tecnicoId;
+    }
 
     if (onUpdateUser) {
       onUpdateUser(updatedUser);
@@ -286,11 +300,17 @@ export default function UserManagement({
         password: password,
         phone: tecPhone.trim(),
         role: selectedRole,
-        assistenciaId: (selectedRole === 'TECNICO' || selectedRole === 'ATENDENTE' || selectedRole === 'ASSISTENCIA_GERENTE') ? (selectedAstId || currentUser.assistenciaId) : undefined,
-        tecnicoId: selectedRole === 'TECNICO' ? (selectedTecId || newUserId) : undefined,
         isReadOnly: isReadOnly,
         active: true
       };
+
+      if ((selectedRole === 'TECNICO' || selectedRole === 'ATENDENTE' || selectedRole === 'ASSISTENCIA_GERENTE') && (selectedAstId || currentUser.assistenciaId)) {
+        newUser.assistenciaId = selectedAstId || currentUser.assistenciaId;
+      }
+
+      if (selectedRole === 'TECNICO' && (selectedTecId || newUserId)) {
+        newUser.tecnicoId = selectedTecId || newUserId;
+      }
 
       onAddUser(newUser);
     }

@@ -46,6 +46,7 @@ export default function App() {
   const [loggedUser, setLoggedUser] = useState<AppUser | null>(null);
   const [storeSettings, setStoreSettings] = useState<StoreSettings>({ name: 'ASSISTÊNCIA' });
   const [initialSelectedOSId, setInitialSelectedOSId] = useState<string | null>(null);
+  const [initialExportOSId, setInitialExportOSId] = useState<string | null>(null);
   const [blockedModalMessage, setBlockedModalMessage] = useState<string | null>(null);
 
   // Theme state
@@ -568,6 +569,7 @@ export default function App() {
             onAdd={handleRegisterOS}
             onCancel={() => setShowAddOSForm(false)}
             defaultAssistenciaId={loggedUser.assistenciaId}
+            ordens={tenantOrdens}
           />
         ) : (
           <div className="space-y-6">
@@ -584,7 +586,9 @@ export default function App() {
                     return;
                   }
                   setInitialSelectedOSId(id);
-                  setActiveTab('ordens');
+                }}
+                onViewOS={(id) => {
+                  setInitialExportOSId(id);
                 }}
                 onShowBlockedAlert={(msg) => setBlockedModalMessage(msg)}
               />
@@ -646,6 +650,8 @@ export default function App() {
                   isReadOnly={loggedUser.isReadOnly || isExpired}
                   initialSelectedOSId={initialSelectedOSId}
                   onClearInitialSelectedOSId={() => setInitialSelectedOSId(null)}
+                  initialExportOSId={initialExportOSId}
+                  onClearInitialExportOSId={() => setInitialExportOSId(null)}
                   onShowBlockedAlert={(msg) => setBlockedModalMessage(msg)}
                 />
               </div>
@@ -711,9 +717,11 @@ export default function App() {
                     email: newTec.email || `${login}@gestaoservico.com`,
                     password: pass,
                     role: 'TECNICO',
-                    tecnicoId: newTec.id,
-                    assistenciaId: loggedUser.assistenciaId
+                    tecnicoId: newTec.id
                   };
+                  if (loggedUser.assistenciaId) {
+                    newUserAccount.assistenciaId = loggedUser.assistenciaId;
+                  }
                   saveToFirestore('usuarios', newUserAccount);
                 }}
                 onUpdateUser={(updatedUsr) => {
@@ -724,6 +732,27 @@ export default function App() {
                     localStorage.setItem('logged_user_fitness', JSON.stringify(updatedUsr));
                   }
                 }}
+              />
+            )}
+
+            {activeTab !== 'ordens' && (
+              <OrdemServicoList
+                ordens={tenantOrdens}
+                assistencias={assistencias}
+                usuarios={tenantUsuarios}
+                currentRole={loggedUser.role}
+                activeRoleEntityId={getActiveUserEntityId()}
+                activeUserName={loggedUser.name}
+                storeSettings={activeStoreSettings}
+                onUpdateOS={handleUpdateOS}
+                onDeleteOS={(loggedUser.role === 'ADMIN') ? handleDeleteOS : undefined}
+                isReadOnly={loggedUser.isReadOnly || isExpired}
+                initialSelectedOSId={initialSelectedOSId}
+                onClearInitialSelectedOSId={() => setInitialSelectedOSId(null)}
+                initialExportOSId={initialExportOSId}
+                onClearInitialExportOSId={() => setInitialExportOSId(null)}
+                onShowBlockedAlert={(msg) => setBlockedModalMessage(msg)}
+                onlyModals={true}
               />
             )}
 

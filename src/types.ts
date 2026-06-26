@@ -39,6 +39,29 @@ export interface Part {
   value: number;
 }
 
+export interface ContactInfo {
+  name: string;
+  phone: string;
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  document: string; // CPF or CNPJ
+  phone: string;
+  email: string;
+  zipCode?: string;
+  address: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  city?: string;
+  state?: string;
+  additionalContacts?: ContactInfo[];
+  assistenciaId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface OSHistory {
   date: string;
   status: OSStatus;
@@ -58,12 +81,15 @@ export interface OrdemServico {
   tecnicoId: string | null;
   clientName: string;
   clientPhone: string;
+  additionalContacts?: ContactInfo[];
   clientEmail: string;
   address: string;
+  addressNumber?: string;
+  addressComplement?: string;
   clientZipCode?: string;
   clientCity?: string;
   clientState?: string;
-  equipmentType: 'Esteira' | 'Bicicleta Ergométrica' | 'Elíptico' | 'Estação de Musculação' | 'Outro';
+  equipmentType: 'Esteira' | 'Bicicleta Ergométrica' | 'Elíptico' | 'Estação de Musculação' | 'Macas' | 'Pilates' | 'Outro';
   equipmentBrand: string;
   equipmentModel: string;
   reportedIssue: string;
@@ -72,6 +98,7 @@ export interface OrdemServico {
   status: OSStatus;
   createdAt: string;
   scheduledVisitDate?: string;
+  isRescheduled?: boolean;
   deliveryTargetDate?: string;
   completionDate?: string;
   totalCostValue: number;
@@ -79,9 +106,15 @@ export interface OrdemServico {
   partsCostValue?: number;
   parts?: Part[];
   laborCostValue?: number;
+  discountValue?: number;
+  discountType?: 'fixed' | 'percentage';
+  isLaborCourtesy?: boolean;
+  isTravelCourtesy?: boolean;
   history: OSHistory[];
   sigTecnicoAbertura?: string;
   sigClienteAbertura?: string;
+  sigClienteAberturaType?: 'drawn' | 'typed';
+  sigClienteAberturaTyped?: string;
   sigAberturaData?: string;
   sigTecnicoFinal?: string;
   sigClienteFinal?: string;

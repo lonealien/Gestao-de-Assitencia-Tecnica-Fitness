@@ -4,7 +4,7 @@ import {
   Plus, AlertTriangle, ShieldCheck, Activity, RotateCw, CheckCircle, 
   Clock, DollarSign, Hammer, Calendar, Eye, X, Phone, Mail, MapPin, 
   User, ClipboardCheck, ArrowRight, ShieldAlert, FileText, Lock,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 interface DashboardStatsProps {
@@ -13,6 +13,7 @@ interface DashboardStatsProps {
   currentRole: UserRole;
   isReadOnly?: boolean;
   onEditOS?: (id: string) => void;
+  onViewOS?: (id: string) => void;
   onShowBlockedAlert?: (message: string) => void;
 }
 
@@ -22,9 +23,10 @@ export default function DashboardStats({
   currentRole,
   isReadOnly,
   onEditOS,
+  onViewOS,
   onShowBlockedAlert
 }: DashboardStatsProps) {
-  const [listFilter, setListFilter] = useState<'dia' | 'semana' | 'mes' | 'todos' | 'por-data' | 'historico' | 'pendentes' | 'conserto' | 'finalizadas'>('dia');
+  const [listFilter, setListFilter] = useState<'dia' | 'amanha' | 'semana' | 'mes' | 'todos' | 'por-data' | 'historico' | 'pendentes' | 'conserto' | 'finalizadas'>('dia');
 
   // Helper to get YYYY-MM-DD in local time
   const getLocalDateStr = (date: Date) => {
@@ -40,6 +42,10 @@ export default function DashboardStats({
 
   const [customSearchStartDate, setCustomSearchStartDate] = useState<string>(firstDayOfMonth);
   const [customSearchEndDate, setCustomSearchEndDate] = useState<string>(todayStr);
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
+  const [startCalendarViewDate, setStartCalendarViewDate] = useState<Date>(new Date());
+  const [endCalendarViewDate, setEndCalendarViewDate] = useState<Date>(new Date());
   const [selectedOS, setSelectedOS] = useState<OrdemServico | null>(null);
   const [expandedDashCards, setExpandedDashCards] = useState<Record<string, boolean>>({});
 
@@ -76,9 +82,17 @@ export default function DashboardStats({
   // Date matchers using local time comparison
   const isTodayMatch = (dateStr?: string) => {
     if (!dateStr) return false;
-    // Handle YYYY-MM-DD consistently avoiding problems with separators
     const cleanDate = dateStr.substring(0, 10);
     return cleanDate === todayStr;
+  };
+
+  const isTomorrowMatch = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomStr = getLocalDateStr(tomorrow);
+    const cleanDate = dateStr.substring(0, 10);
+    return cleanDate === tomStr;
   };
 
   const isWeekMatch = (dateStr?: string) => {
@@ -107,13 +121,20 @@ export default function DashboardStats({
   // Filter active and incomplete ordens
   const activeOrdens = ordens.filter(o => o.status !== 'Finalizada' && o.status !== 'Cancelada');
 
-  // Today scheduled/created orders (Including all statuses as requested - "independente do status")
+  // Today scheduled/created orders
   const ordensDoDia = ordens.filter(o => {
     const isTargetToday = isTodayMatch(o.scheduledVisitDate);
     const isCreatedToday = isTodayMatch(o.createdAt);
-    // Also check delivery target if technician set it to today
     const isDeliveryToday = isTodayMatch(o.deliveryTargetDate);
     return isTargetToday || isCreatedToday || isDeliveryToday;
+  });
+
+  // Tomorrow scheduled/created orders
+  const ordensAmanha = ordens.filter(o => {
+    const isTargetTomorrow = isTomorrowMatch(o.scheduledVisitDate);
+    const isCreatedTomorrow = isTomorrowMatch(o.createdAt);
+    const isDeliveryTomorrow = isTomorrowMatch(o.deliveryTargetDate);
+    return isTargetTomorrow || isCreatedTomorrow || isDeliveryTomorrow;
   });
 
   // Week scheduled/created orders
@@ -146,6 +167,8 @@ export default function DashboardStats({
   let displayedOrdens = [];
   if (listFilter === 'dia') {
     displayedOrdens = ordensDoDia;
+  } else if (listFilter === 'amanha') {
+    displayedOrdens = ordensAmanha;
   } else if (listFilter === 'semana') {
     displayedOrdens = ordensDaSemana;
   } else if (listFilter === 'mes') {
@@ -331,10 +354,10 @@ export default function DashboardStats({
             </div>
             <div>
               <h3 className="text-lg font-black uppercase tracking-tight text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-                CRONOGRAMA DE ATENDIMENTOS & VISITAS
+                CRONOGRAMA DE ATENDIMENTOS
               </h3>
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-wide">
-                Filtre os agendamentos do dia, semana, mês ou acesse o histórico completo de datas
+                Filtre os agendamentos da semana, dia, mês ou acesse o histórico completo de datas
               </p>
             </div>
           </div>
@@ -349,7 +372,17 @@ export default function DashboardStats({
                   : 'bg-white dark:bg-neutral-800 hover:bg-neutral-50 text-neutral-900 dark:text-neutral-100'
               }`}
             >
-              Do Dia ({ordensDoDia.length})
+              Hoje ({ordensDoDia.length})
+            </button>
+            <button
+              onClick={() => setListFilter('amanha')}
+              className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider border border-neutral-200 dark:border-neutral-700 transition-all rounded-2xl cursor-pointer ${
+                listFilter === 'amanha'
+                  ? 'bg-yellow-300 dark:bg-yellow-400 text-neutral-900 shadow-sm dark:shadow-none'
+                  : 'bg-white dark:bg-neutral-800 hover:bg-neutral-50 text-neutral-900 dark:text-neutral-100'
+              }`}
+            >
+              Amanhã ({ordensAmanha.length})
             </button>
             <button
               onClick={() => setListFilter('semana')}
@@ -359,7 +392,7 @@ export default function DashboardStats({
                   : 'bg-white dark:bg-neutral-800 hover:bg-neutral-50 text-neutral-900 dark:text-neutral-100'
               }`}
             >
-              Da Semana ({ordensDaSemana.length})
+              Semana ({ordensDaSemana.length})
             </button>
             <button
               onClick={() => setListFilter('mes')}
@@ -375,11 +408,11 @@ export default function DashboardStats({
               onClick={() => setListFilter('todos')}
               className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider border border-neutral-200 dark:border-neutral-700 transition-all rounded-2xl cursor-pointer ${
                 listFilter === 'todos'
-                  ? 'bg-yellow-300 dark:bg-yellow-400 text-neutral-900 shadow-sm dark:shadow-none'
+                  ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-sm dark:shadow-none'
                   : 'bg-white dark:bg-neutral-800 hover:bg-neutral-50 text-neutral-900 dark:text-neutral-100'
               }`}
             >
-              Fila Total Ativa ({activeOrdens.length})
+              Ver Tudo ({activeOrdens.length})
             </button>
             <button
               onClick={() => setListFilter('pendentes')}
@@ -427,27 +460,284 @@ export default function DashboardStats({
         {/* Custom search date sub-bar */}
         {listFilter === 'por-data' && (
           <div className="flex flex-col md:flex-row items-center gap-4 bg-neutral-100 border border-neutral-200 dark:border-neutral-700 p-4 rounded-2xl shadow-sm dark:shadow-none w-full">
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+              {/* Início Calendar Picker */}
+              <div className="flex items-center gap-2 relative">
                 <span className="text-xs font-black uppercase text-neutral-900 dark:text-neutral-100">Início:</span>
-                <input 
-                  type="date"
-                  value={customSearchStartDate}
-                  onChange={(e) => setCustomSearchStartDate(e.target.value)}
-                  className="border border-neutral-200 dark:border-neutral-700 px-3 py-1 font-mono text-xs font-black text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 focus:outline-none focus:bg-yellow-50"
-                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowStartCalendar(!showStartCalendar);
+                    setShowEndCalendar(false);
+                    if (customSearchStartDate) {
+                      setStartCalendarViewDate(new Date(customSearchStartDate + 'T00:00:00'));
+                    }
+                  }}
+                  className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-lg hover:bg-neutral-100"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-neutral-900 dark:text-neutral-100" />
+                  {customSearchStartDate ? (
+                    customSearchStartDate.split('-').reverse().join('/')
+                  ) : (
+                    'SELECIONAR'
+                  )}
+                </button>
+
+                {showStartCalendar && (
+                  <div className="absolute left-0 top-full mt-2 w-72 bg-white dark:bg-neutral-900 border-2 border-neutral-900 dark:border-neutral-700 shadow-xl p-4 rounded-xl z-50">
+                    {/* Calendar Header */}
+                    <div className="flex items-center justify-between mb-3 border-b border-neutral-100 dark:border-neutral-800 pb-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStartCalendarViewDate(prev => {
+                            const d = new Date(prev);
+                            d.setMonth(d.getMonth() - 1);
+                            return d;
+                          });
+                        }}
+                        className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-all cursor-pointer"
+                      >
+                        <ChevronLeft className="w-4 h-4 text-neutral-900 dark:text-neutral-100" />
+                      </button>
+                      
+                      <span className="text-[10px] font-black uppercase text-neutral-900 dark:text-neutral-100 select-none">
+                        {startCalendarViewDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStartCalendarViewDate(prev => {
+                            const d = new Date(prev);
+                            d.setMonth(d.getMonth() + 1);
+                            return d;
+                          });
+                        }}
+                        className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-all cursor-pointer"
+                      >
+                        <ChevronRight className="w-4 h-4 text-neutral-900 dark:text-neutral-100" />
+                      </button>
+                    </div>
+
+                    {/* Weekdays */}
+                    <div className="grid grid-cols-7 gap-1 text-center mb-1 select-none">
+                      {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
+                        <span key={i} className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase">
+                          {d}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Days Grid */}
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                      {(() => {
+                        const year = startCalendarViewDate.getFullYear();
+                        const month = startCalendarViewDate.getMonth();
+                        
+                        const firstDay = new Date(year, month, 1);
+                        const startDayOfWeek = firstDay.getDay();
+                        
+                        const daysInMonth = new Date(year, month + 1, 0).getDate();
+                        const cells = [];
+                        
+                        for (let i = 0; i < startDayOfWeek; i++) {
+                          cells.push(<div key={`empty-start-${i}`} className="h-7 w-7" />);
+                        }
+                        
+                        const todayStr = getLocalDateStr(new Date());
+
+                        for (let day = 1; day <= daysInMonth; day++) {
+                          const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                          
+                          const osCount = ordens.filter(o => {
+                            if (o.status === 'Finalizada' || o.status === 'Cancelada') return false;
+                            const scheduledStr = o.scheduledVisitDate ? o.scheduledVisitDate.substring(0, 10) : '';
+                            return scheduledStr === dayDateStr;
+                          }).length;
+
+                          const isSelected = customSearchStartDate === dayDateStr;
+                          const isToday = dayDateStr === todayStr;
+
+                          cells.push(
+                            <button
+                              key={`day-start-${day}`}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCustomSearchStartDate(dayDateStr);
+                                setShowStartCalendar(false);
+                              }}
+                              className={`group relative h-7 w-7 flex flex-col items-center justify-center text-[11px] font-extrabold rounded-md transition-all cursor-pointer ${
+                                isSelected 
+                                  ? 'bg-amber-400 dark:bg-amber-400 text-neutral-900 border border-neutral-900 dark:border-neutral-700 shadow-sm' 
+                                  : isToday
+                                    ? 'border border-amber-500/50 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+                                    : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-100'
+                              }`}
+                            >
+                              <span>{day}</span>
+                              
+                              {osCount > 0 && (
+                                <span 
+                                  className={`absolute bottom-0.5 w-1 h-1 rounded-full ${
+                                    isSelected ? 'bg-neutral-900' : 'bg-rose-500'
+                                  }`} 
+                                  title={`${osCount} OS aberta(s)`} 
+                                />
+                              )}
+                            </button>
+                          );
+                        }
+                        
+                        return cells;
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
+
+              {/* Fim Calendar Picker */}
+              <div className="flex items-center gap-2 relative">
                 <span className="text-xs font-black uppercase text-neutral-900 dark:text-neutral-100">Fim:</span>
-                <input 
-                  type="date"
-                  value={customSearchEndDate}
-                  onChange={(e) => setCustomSearchEndDate(e.target.value)}
-                  className="border border-neutral-200 dark:border-neutral-700 px-3 py-1 font-mono text-xs font-black text-neutral-900 dark:text-neutral-100 bg-white dark:bg-neutral-800 focus:outline-none focus:bg-yellow-50"
-                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEndCalendar(!showEndCalendar);
+                    setShowStartCalendar(false);
+                    if (customSearchEndDate) {
+                      setEndCalendarViewDate(new Date(customSearchEndDate + 'T00:00:00'));
+                    }
+                  }}
+                  className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-lg hover:bg-neutral-100"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-neutral-900 dark:text-neutral-100" />
+                  {customSearchEndDate ? (
+                    customSearchEndDate.split('-').reverse().join('/')
+                  ) : (
+                    'SELECIONAR'
+                  )}
+                </button>
+
+                {showEndCalendar && (
+                  <div className="absolute left-0 top-full mt-2 w-72 bg-white dark:bg-neutral-900 border-2 border-neutral-900 dark:border-neutral-700 shadow-xl p-4 rounded-xl z-50">
+                    {/* Calendar Header */}
+                    <div className="flex items-center justify-between mb-3 border-b border-neutral-100 dark:border-neutral-800 pb-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEndCalendarViewDate(prev => {
+                            const d = new Date(prev);
+                            d.setMonth(d.getMonth() - 1);
+                            return d;
+                          });
+                        }}
+                        className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-all cursor-pointer"
+                      >
+                        <ChevronLeft className="w-4 h-4 text-neutral-900 dark:text-neutral-100" />
+                      </button>
+                      
+                      <span className="text-[10px] font-black uppercase text-neutral-900 dark:text-neutral-100 select-none">
+                        {endCalendarViewDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEndCalendarViewDate(prev => {
+                            const d = new Date(prev);
+                            d.setMonth(d.getMonth() + 1);
+                            return d;
+                          });
+                        }}
+                        className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-all cursor-pointer"
+                      >
+                        <ChevronRight className="w-4 h-4 text-neutral-900 dark:text-neutral-100" />
+                      </button>
+                    </div>
+
+                    {/* Weekdays */}
+                    <div className="grid grid-cols-7 gap-1 text-center mb-1 select-none">
+                      {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
+                        <span key={i} className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase">
+                          {d}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Days Grid */}
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                      {(() => {
+                        const year = endCalendarViewDate.getFullYear();
+                        const month = endCalendarViewDate.getMonth();
+                        
+                        const firstDay = new Date(year, month, 1);
+                        const startDayOfWeek = firstDay.getDay();
+                        
+                        const daysInMonth = new Date(year, month + 1, 0).getDate();
+                        const cells = [];
+                        
+                        for (let i = 0; i < startDayOfWeek; i++) {
+                          cells.push(<div key={`empty-end-${i}`} className="h-7 w-7" />);
+                        }
+                        
+                        const todayStr = getLocalDateStr(new Date());
+
+                        for (let day = 1; day <= daysInMonth; day++) {
+                          const dayDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                          
+                          const osCount = ordens.filter(o => {
+                            if (o.status === 'Finalizada' || o.status === 'Cancelada') return false;
+                            const scheduledStr = o.scheduledVisitDate ? o.scheduledVisitDate.substring(0, 10) : '';
+                            return scheduledStr === dayDateStr;
+                          }).length;
+
+                          const isSelected = customSearchEndDate === dayDateStr;
+                          const isToday = dayDateStr === todayStr;
+
+                          cells.push(
+                            <button
+                              key={`day-end-${day}`}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCustomSearchEndDate(dayDateStr);
+                                setShowEndCalendar(false);
+                              }}
+                              className={`group relative h-7 w-7 flex flex-col items-center justify-center text-[11px] font-extrabold rounded-md transition-all cursor-pointer ${
+                                isSelected 
+                                  ? 'bg-amber-400 dark:bg-amber-400 text-neutral-900 border border-neutral-900 dark:border-neutral-700 shadow-sm' 
+                                  : isToday
+                                    ? 'border border-amber-500/50 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+                                    : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-100'
+                              }`}
+                            >
+                              <span>{day}</span>
+                              
+                              {osCount > 0 && (
+                                <span 
+                                  className={`absolute bottom-0.5 w-1 h-1 rounded-full ${
+                                    isSelected ? 'bg-neutral-900' : 'bg-rose-500'
+                                  }`} 
+                                  title={`${osCount} OS aberta(s)`} 
+                                />
+                              )}
+                            </button>
+                          );
+                        }
+                        
+                        return cells;
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="text-[10px] uppercase font-bold text-gray-700 md:ml-auto">
+            <div className="text-xs uppercase font-black text-neutral-900 dark:text-neutral-100 md:ml-auto">
               Mostrando registros de <span className="font-mono text-neutral-900 dark:text-neutral-100 font-black bg-yellow-200 px-1 border border-neutral-200 dark:border-neutral-700">{customSearchStartDate.split('-').reverse().join('/')}</span> até <span className="font-mono text-neutral-900 dark:text-neutral-100 font-black bg-yellow-200 px-1 border border-neutral-200 dark:border-neutral-700">{customSearchEndDate.split('-').reverse().join('/')}</span> (inclusive Concluídas/Canceladas)
             </div>
           </div>
@@ -491,48 +781,77 @@ export default function DashboardStats({
                   className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm dark:shadow-none hover:shadow-md transition-all flex flex-col justify-between overflow-hidden"
                 >
                   {/* Clickable Header for Collapsing/Expanding */}
-                  <button
-                    type="button"
+                  <div
                     onClick={() => setExpandedDashCards(prev => ({ [o.id]: !prev[o.id] }))}
                     className="w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-900/40 transition-all flex flex-col justify-between space-y-3 cursor-pointer select-none"
                   >
-                    {/* ID and Badges row */}
+                    {/* ID and Client Name row */}
                     <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-black tracking-widest text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 px-2 py-0.5 rounded">
+                      <div className="flex items-center gap-3 overflow-hidden flex-1">
+                        <span className="font-mono text-xs font-black tracking-widest text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 px-2 py-0.5 rounded shrink-0">
                           {o.idFormatado}
                         </span>
+                        <span className="text-sm font-black text-neutral-900 dark:text-neutral-100 truncate min-w-0">
+                          {o.clientName}
+                        </span>
                         {isPrevistoHoje && (
-                          <span className="bg-red-500 text-white dark:text-neutral-900 text-[9px] font-black uppercase px-1.5 py-0.5 tracking-wider border border-neutral-200 dark:border-neutral-700 animate-pulse rounded">
+                          <span className="bg-red-500 text-white dark:text-neutral-900 text-[9px] font-black uppercase px-1.5 py-0.5 tracking-wider border border-neutral-200 dark:border-neutral-700 animate-pulse rounded shrink-0">
                             PREVISTO HOJE
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <span className={`text-[9px] font-black uppercase px-2 py-0.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl ${statusColors}`}>
                           {o.status}
                         </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onViewOS) {
+                              onViewOS(o.id);
+                            } else {
+                              setSelectedOS(o);
+                            }
+                          }}
+                          className="p-1.5 bg-amber-300 hover:bg-amber-400 text-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                          title="Visualizar OS"
+                        >
+                          <Eye className="w-3.5 h-3.5 stroke-[2.5]" />
+                        </button>
+                        {onEditOS && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isReadOnly) {
+                                onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição de OS suspensa.");
+                                return;
+                              }
+                              onEditOS(o.id);
+                            }}
+                            className="p-1.5 bg-yellow-300 hover:bg-yellow-400 text-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 transition-all shadow-sm"
+                            title="Editar OS"
+                          >
+                            <Hammer className="w-3.5 h-3.5 stroke-[2.5]" />
+                          </button>
+                        )}
                         <span className="text-neutral-400 dark:text-neutral-500 ml-1">
                           {isExpanded ? <ChevronUp className="w-4 h-4 stroke-[3]" /> : <ChevronDown className="w-4 h-4 stroke-[3]" />}
                         </span>
                       </div>
                     </div>
 
-                    {/* Machine and client detail configured exactly as: Client Name under OS, and Equipment details below Client Name */}
+                    {/* Machine detail below */}
                     <div className="space-y-1.5">
-                      {/* Line 1: Client Name under OS Number */}
-                      <div className="text-xs text-neutral-500 font-bold uppercase tracking-wide flex items-center gap-1">
-                        <User className="w-3.5 h-3.5 stroke-[2] shrink-0 text-neutral-500" />
-                        <span className="text-neutral-950 dark:text-white font-extrabold text-sm normal-case">{o.clientName}</span>
-                      </div>
-                      
-                      {/* Line 2: Equipment details under Client Name */}
-                      <h4 className="text-xs font-bold uppercase tracking-tight text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5 pl-4.5">
-                        <span>🛠️ {o.equipmentType} • {o.equipmentBrand}</span>
-                        <span className="font-medium font-mono text-[11px] text-neutral-400 dark:text-neutral-500">({o.equipmentModel})</span>
+                      <h4 className="text-xs font-bold uppercase tracking-tight text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5">
+                        <span className="shrink-0">🛠️ {o.equipmentType} • {o.equipmentBrand}</span>
+                        <span className="font-mono text-sm font-black text-neutral-900 dark:text-neutral-100">
+                          {o.equipmentModel}
+                        </span>
                       </h4>
                     </div>
-                  </button>
+                  </div>
 
                   {/* Expanded Area with additional details and core functional actions */}
                   {isExpanded && (
@@ -566,7 +885,11 @@ export default function DashboardStats({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedOS(o);
+                              if (onViewOS) {
+                                onViewOS(o.id);
+                              } else {
+                                setSelectedOS(o);
+                              }
                             }}
                             className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 text-white dark:text-neutral-900 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 flex items-center gap-1 cursor-pointer transition-all active:translate-x-0.5"
                           >
@@ -631,8 +954,22 @@ export default function DashboardStats({
                   <span className="text-xs font-black uppercase text-neutral-900 dark:text-neutral-100 mt-1 inline-block bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-1.5 py-0.5">{selectedOS.status}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-black uppercase text-gray-500 block leading-none">OUTLAY ESTIMADO</span>
-                  <span className="text-xs font-black uppercase text-emerald-700 mt-1 inline-block bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-1.5 py-0.5 font-mono">R$ {(selectedOS.totalCostValue || 0).toFixed(2)}</span>
+                  <span className="text-[9px] font-black uppercase text-gray-500 block leading-none">TOTAL ESTIMADO</span>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <span className="text-xs font-black uppercase text-emerald-700 inline-block bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 px-1.5 py-0.5 font-mono">
+                      R$ {(selectedOS.totalCostValue || 0).toFixed(2)}
+                    </span>
+                    {selectedOS.discountValue && selectedOS.discountValue > 0 && (
+                      <span className="text-[10px] font-black text-rose-600 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 px-1.5 py-0.5 rounded">
+                        {selectedOS.discountType === 'percentage' ? `-${selectedOS.discountValue}%` : `-R$ ${selectedOS.discountValue.toFixed(2)}`}
+                      </span>
+                    )}
+                    {(selectedOS.isLaborCourtesy || selectedOS.isTravelCourtesy) && (
+                      <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded">
+                        CORTESIA: {selectedOS.isLaborCourtesy && 'MÃO DE OBRA'}{selectedOS.isLaborCourtesy && selectedOS.isTravelCourtesy && ' + '}{selectedOS.isTravelCourtesy && 'DESLOC.'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -665,7 +1002,12 @@ export default function DashboardStats({
                 <div className="bg-neutral-50 border border-neutral-200 dark:border-neutral-700 p-4 space-y-3 text-xs">
                   <div>
                     <span className="font-black text-neutral-500 uppercase block tracking-wider text-[9px]">EQUIPAMENTO SOB MANUTENÇÃO</span>
-                    <span className="font-black text-neutral-900 dark:text-neutral-100 text-sm uppercase">{selectedOS.equipmentType} — {selectedOS.equipmentBrand} <span className="font-mono text-neutral-500 font-normal">({selectedOS.equipmentModel})</span></span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-black text-neutral-900 dark:text-neutral-100 text-sm uppercase">{selectedOS.equipmentType} — {selectedOS.equipmentBrand}</span>
+                      <span className="font-mono text-lg font-black text-neutral-900 dark:text-neutral-100">
+                        {selectedOS.equipmentModel}
+                      </span>
+                    </div>
                   </div>
                   <div>
                     <span className="font-black text-neutral-500 uppercase block tracking-wider text-[9px]">DEFEITO RECLAMADO EM TRIAGEM</span>
