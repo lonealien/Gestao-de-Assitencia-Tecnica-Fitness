@@ -10,6 +10,7 @@ import {
 interface DashboardStatsProps {
   ordens: OrdemServico[];
   onOpenNewOSForm: () => void;
+  onOpenNewOrcamentoForm?: () => void;
   currentRole: UserRole;
   isReadOnly?: boolean;
   onEditOS?: (id: string) => void;
@@ -20,13 +21,14 @@ interface DashboardStatsProps {
 export default function DashboardStats({
   ordens,
   onOpenNewOSForm,
+  onOpenNewOrcamentoForm,
   currentRole,
   isReadOnly,
   onEditOS,
   onViewOS,
   onShowBlockedAlert
 }: DashboardStatsProps) {
-  const [listFilter, setListFilter] = useState<'dia' | 'amanha' | 'semana' | 'mes' | 'todos' | 'por-data' | 'historico' | 'pendentes' | 'conserto' | 'finalizadas'>('dia');
+  const [listFilter, setListFilter] = useState<'dia' | 'amanha' | 'semana' | 'mes' | 'todos' | 'por-data' | 'historico' | 'pendentes' | 'conserto' | 'finalizadas' | 'aguardando-reagendamento'>('dia');
 
   // Helper to get YYYY-MM-DD in local time
   const getLocalDateStr = (date: Date) => {
@@ -69,6 +71,7 @@ export default function DashboardStats({
   const pendente = ordens.filter(o => o.status === 'Pendente').length;
   const emExecucaoCount = 0; // These statuses no longer exist in types
   const aguardandoPecas = ordens.filter(o => o.status === 'Aguardando Peça').length;
+  const aguardandoReagendamento = ordens.filter(o => o.status === 'Aguardando Reagendamento').length;
   const concluida = ordens.filter(o => o.status === 'Finalizada').length;
 
   const totalRevenue = ordens
@@ -181,6 +184,8 @@ export default function DashboardStats({
     displayedOrdens = ordens.filter(o => o.status === 'Pendente');
   } else if (listFilter === 'conserto') {
     displayedOrdens = ordens.filter(o => o.status === 'Aguardando Peça');
+  } else if (listFilter === 'aguardando-reagendamento') {
+    displayedOrdens = ordens.filter(o => o.status === 'Aguardando Reagendamento');
   } else if (listFilter === 'finalizadas') {
     displayedOrdens = ordens.filter(o => o.status === 'Finalizada');
   } else {
@@ -216,6 +221,19 @@ export default function DashboardStats({
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               Abrir OS
+            </button>
+            <button
+              onClick={() => {
+                if (isReadOnly) {
+                  onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Criação de orçamento suspensa.");
+                  return;
+                }
+                onOpenNewOrcamentoForm && onOpenNewOrcamentoForm();
+              }}
+              className="bg-white hover:bg-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white border-2 border-neutral-900 dark:border-neutral-700 font-black uppercase tracking-wider px-5 py-2 rounded-2xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              Gerar Orçamento
             </button>
           </div>
         ) : null}
@@ -433,6 +451,16 @@ export default function DashboardStats({
               }`}
             >
               Aguardando Peça ({aguardandoPecas})
+            </button>
+            <button
+              onClick={() => setListFilter('aguardando-reagendamento')}
+              className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider border border-neutral-200 dark:border-neutral-700 transition-all rounded-2xl cursor-pointer ${
+                listFilter === 'aguardando-reagendamento'
+                  ? 'bg-orange-300 dark:bg-orange-400 text-neutral-900 shadow-sm dark:shadow-none'
+                  : 'bg-white dark:bg-neutral-800 hover:bg-neutral-50 text-neutral-900 dark:text-neutral-100'
+              }`}
+            >
+              Aguardando Reagendamento ({aguardandoReagendamento})
             </button>
             <button
               onClick={() => setListFilter('finalizadas')}
@@ -769,6 +797,7 @@ export default function DashboardStats({
               // Status styling
               const statusColors = o.status === 'Pendente' ? 'bg-yellow-300 dark:bg-yellow-400 text-neutral-900'
                 : o.status === 'Aguardando Peça' ? 'bg-purple-100 text-purple-900 border-purple-300'
+                : o.status === 'Aguardando Reagendamento' ? 'bg-orange-100 text-orange-900 border-orange-300'
                 : o.status === 'Finalizada' ? 'bg-emerald-400 text-white dark:text-neutral-900'
                 : 'bg-neutral-200 text-neutral-900 dark:text-neutral-100';
 
@@ -783,73 +812,119 @@ export default function DashboardStats({
                   {/* Clickable Header for Collapsing/Expanding */}
                   <div
                     onClick={() => setExpandedDashCards(prev => ({ [o.id]: !prev[o.id] }))}
-                    className="w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-900/40 transition-all flex flex-col justify-between space-y-3 cursor-pointer select-none"
+                    className="w-full text-left p-4 hover:bg-neutral-50 dark:hover:bg-neutral-900/40 transition-all flex flex-row items-start justify-between gap-3 cursor-pointer select-none"
                   >
-                    {/* ID and Client Name row */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-                      <div className="flex items-center gap-3 overflow-hidden flex-1">
-                        <span className="font-mono text-xs font-black tracking-widest text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 px-2 py-0.5 rounded shrink-0">
-                          {o.idFormatado}
-                        </span>
-                        <span className="text-sm font-black text-neutral-900 dark:text-neutral-100 truncate min-w-0">
-                          {o.clientName}
-                        </span>
-                        {isPrevistoHoje && (
-                          <span className="bg-red-500 text-white dark:text-neutral-900 text-[9px] font-black uppercase px-1.5 py-0.5 tracking-wider border border-neutral-200 dark:border-neutral-700 animate-pulse rounded shrink-0">
-                            PREVISTO HOJE
+                    <div className="flex-1 min-w-0">
+                      {/* Mobile Layout */}
+                      <div className="flex flex-col gap-2.5 sm:hidden">
+                        {/* 1. Número da OS, Cliente e Status */}
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-xs font-black tracking-widest text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 px-2 py-0.5 rounded shrink-0">
+                              {o.idFormatado}
+                            </span>
+                            <span className="text-sm font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-tight truncate max-w-[180px]">
+                              {o.clientName}
+                            </span>
+                            {isPrevistoHoje && (
+                              <span className="bg-red-500 text-white dark:text-neutral-900 text-[9px] font-black uppercase px-1.5 py-0.5 tracking-wider border border-neutral-200 dark:border-neutral-700 animate-pulse rounded shrink-0">
+                                PREVISTO HOJE
+                              </span>
+                            )}
+                          </div>
+                          <div className="self-start">
+                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 block ${statusColors}`}>
+                              {o.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* 2. Dados do Equipamento */}
+                        <div className="space-y-1 mt-0.5">
+                          <span className="text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-tight block">
+                            <span className="text-xs font-black text-neutral-400 uppercase tracking-widest mr-1">Eqp:</span>
+                            <span className="text-sm font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-tight">
+                              {o.equipmentType} • {o.equipmentBrand} <span className="font-mono text-neutral-400 font-medium text-xs">({o.equipmentModel})</span>
+                            </span>
                           </span>
-                        )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+
+                      {/* Desktop Layout */}
+                      <div className="hidden sm:flex flex-col gap-2">
+                        {/* ID and Client Name row */}
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <span className="font-mono text-xs font-black tracking-widest text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-600 px-2 py-0.5 rounded shrink-0">
+                            {o.idFormatado}
+                          </span>
+                          <span className="text-sm font-black text-neutral-900 dark:text-neutral-100 truncate min-w-0">
+                            {o.clientName}
+                          </span>
+                          {isPrevistoHoje && (
+                            <span className="bg-red-500 text-white dark:text-neutral-900 text-[9px] font-black uppercase px-1.5 py-0.5 tracking-wider border border-neutral-200 dark:border-neutral-700 animate-pulse rounded shrink-0">
+                              PREVISTO HOJE
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Machine detail below */}
+                        <div className="space-y-1.5">
+                          <h4 className="text-xs font-bold uppercase tracking-tight text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5">
+                            <span className="shrink-0">🛠️ {o.equipmentType} • {o.equipmentBrand}</span>
+                            <span className="font-mono text-sm font-black text-neutral-900 dark:text-neutral-100">
+                              {o.equipmentModel}
+                            </span>
+                          </h4>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right side actions and collapse/expand */}
+                    <div className="flex items-center gap-1.5 shrink-0 ml-auto pt-0.5 sm:pt-0">
+                      <div className="hidden sm:block text-right mr-1.5">
+                        <span className="text-[8px] font-black text-neutral-400 block uppercase tracking-widest leading-none mb-0.5 text-right font-bold">Status</span>
                         <span className={`text-[9px] font-black uppercase px-2 py-0.5 border border-neutral-200 dark:border-neutral-700 rounded-2xl ${statusColors}`}>
                           {o.status}
                         </span>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onViewOS) {
+                            onViewOS(o.id);
+                          } else {
+                            setSelectedOS(o);
+                          }
+                        }}
+                        className="p-1.5 bg-amber-300 hover:bg-amber-400 text-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                        title="Visualizar OS"
+                      >
+                        <Eye className="w-3.5 h-3.5 stroke-[2.5]" />
+                      </button>
+                      
+                      {onEditOS && (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (onViewOS) {
-                              onViewOS(o.id);
-                            } else {
-                              setSelectedOS(o);
+                            if (isReadOnly) {
+                              onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição de OS suspensa.");
+                              return;
                             }
+                            onEditOS(o.id);
                           }}
-                          className="p-1.5 bg-amber-300 hover:bg-amber-400 text-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 transition-all shadow-sm flex items-center justify-center cursor-pointer"
-                          title="Visualizar OS"
+                          className="p-1.5 bg-yellow-300 hover:bg-yellow-400 text-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 transition-all shadow-sm cursor-pointer"
+                          title="Editar OS"
                         >
-                          <Eye className="w-3.5 h-3.5 stroke-[2.5]" />
+                          <Hammer className="w-3.5 h-3.5 stroke-[2.5]" />
                         </button>
-                        {onEditOS && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (isReadOnly) {
-                                onShowBlockedAlert && onShowBlockedAlert("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição de OS suspensa.");
-                                return;
-                              }
-                              onEditOS(o.id);
-                            }}
-                            className="p-1.5 bg-yellow-300 hover:bg-yellow-400 text-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700 transition-all shadow-sm"
-                            title="Editar OS"
-                          >
-                            <Hammer className="w-3.5 h-3.5 stroke-[2.5]" />
-                          </button>
-                        )}
-                        <span className="text-neutral-400 dark:text-neutral-500 ml-1">
-                          {isExpanded ? <ChevronUp className="w-4 h-4 stroke-[3]" /> : <ChevronDown className="w-4 h-4 stroke-[3]" />}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Machine detail below */}
-                    <div className="space-y-1.5">
-                      <h4 className="text-xs font-bold uppercase tracking-tight text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5">
-                        <span className="shrink-0">🛠️ {o.equipmentType} • {o.equipmentBrand}</span>
-                        <span className="font-mono text-sm font-black text-neutral-900 dark:text-neutral-100">
-                          {o.equipmentModel}
-                        </span>
-                      </h4>
+                      )}
+                      
+                      <span className="text-neutral-400 dark:text-neutral-500 ml-1">
+                        {isExpanded ? <ChevronUp className="w-4 h-4 stroke-[3]" /> : <ChevronDown className="w-4 h-4 stroke-[3]" />}
+                      </span>
                     </div>
                   </div>
 

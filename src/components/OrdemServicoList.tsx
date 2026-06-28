@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toJpeg } from 'html-to-image';
 import jsPDF from 'jspdf';
+import { cleanOklabFromStylesheets } from '../utils';
 import { SignaturePad } from './SignaturePad';
 
 interface OrdemServicoListProps {
@@ -115,8 +116,10 @@ export default function OrdemServicoList({
   const [assigneeTecnicoId, setAssigneeTecnicoId] = useState<string>('');
   const [editScheduledVisitDate, setEditScheduledVisitDate] = useState<string>('');
   const [editIsRescheduled, setEditIsRescheduled] = useState<boolean>(false);
+  const [editRescheduledVisitDate, setEditRescheduledVisitDate] = useState<string>('');
   const [editCompletionDate, setEditCompletionDate] = useState<string>('');
   const [editPaymentMethod, setEditPaymentMethod] = useState<OrdemServico['paymentMethod'] | ''>('');
+  const [editInstallments, setEditInstallments] = useState<number>(1);
   const [editAdditionalContacts, setEditAdditionalContacts] = useState<{name: string, phone: string}[]>([]);
   const [editDiscountValue, setEditDiscountValue] = useState<number>(0);
   const [editDiscountType, setEditDiscountType] = useState<'fixed' | 'percentage'>('fixed');
@@ -248,9 +251,11 @@ export default function OrdemServicoList({
     setAssigneeTecnicoId(os.tecnicoId || '');
     setEditScheduledVisitDate(os.scheduledVisitDate || '');
     setEditIsRescheduled(os.isRescheduled || false);
+    setEditRescheduledVisitDate(os.rescheduledVisitDate || '');
     setEditAdditionalContacts(os.additionalContacts || []);
     setEditCompletionDate(os.completionDate || '');
     setEditPaymentMethod(os.paymentMethod || '');
+    setEditInstallments(os.installments || 1);
     setEditDiscountValue(os.discountValue || 0);
     setEditDiscountType(os.discountType || 'fixed');
     setEditIsLaborCourtesy(os.isLaborCourtesy || false);
@@ -387,6 +392,7 @@ export default function OrdemServicoList({
     switch (status) {
       case 'Pendente': return 'bg-neutral-100 text-neutral-900 dark:text-neutral-100 border-black';
       case 'Aguardando Peça': return 'bg-amber-300 dark:bg-amber-400 text-neutral-900 border-black';
+      case 'Aguardando Reagendamento': return 'bg-orange-300 dark:bg-orange-400 text-neutral-900 border-black';
       case 'Finalizada': return 'bg-emerald-300 dark:bg-emerald-400 text-neutral-900 border-black';
       case 'Cancelada': return 'bg-rose-400 text-neutral-900 dark:text-neutral-100 border-black';
       default: return 'bg-neutral-100 text-neutral-900';
@@ -408,35 +414,17 @@ export default function OrdemServicoList({
       return;
     }
     const hasVisitDateChanged = editScheduledVisitDate !== (os.scheduledVisitDate || '');
-    const hasIsRescheduledChanged = editIsRescheduled !== (os.isRescheduled || false);
-
-    const hasSigsChanged = 
-      sigTecnicoAberturaInput !== (os.sigTecnicoAbertura || '') ||
-      sigClienteAberturaInput !== (os.sigClienteAbertura || '') ||
-      sigClienteAberturaTypeInput !== (os.sigClienteAberturaType || 'drawn') ||
-      sigClienteAberturaTypedInput !== (os.sigClienteAberturaTyped || '') ||
-      sigTecnicoFinalInput !== (os.sigTecnicoFinal || '') ||
-      sigClienteFinalInput !== (os.sigClienteFinal || '');
-
-    const hasTecnicoChanged = assigneeTecnicoId !== (os.tecnicoId || '');
-
-    const hasFieldsChanged =
-      servicoRealizado.trim() !== (os.servicoRealizado || '') ||
-      observacoes.trim() !== (os.observacoes || '') ||
-      technicalDiagnosisText.trim() !== (os.technicalDiagnosis || '') ||
-      hasTecnicoChanged;
-
-    const hasFotosChanged = 
-      JSON.stringify(editFotos) !== JSON.stringify(os.fotos || []);
-
-    const hasContactsChanged = JSON.stringify(editAdditionalContacts) !== JSON.stringify(os.additionalContacts || []);
 
     // Determine target/applied status.
     let appliedStatus = overrideStatus || newStatus || os.status;
     
-    // Automatically set status to 'Aguardando Peça' if rescheduled and not overridden to Finalizada
+    // Automatically set status to 'Aguardando Reagendamento' if rescheduled and not overridden to Finalizada
     if (editIsRescheduled && overrideStatus !== 'Finalizada') {
-      appliedStatus = 'Aguardando Peça';
+      if (!editRescheduledVisitDate) {
+        appliedStatus = 'Aguardando Reagendamento';
+      } else {
+        appliedStatus = overrideStatus || newStatus || 'Pendente';
+      }
     }
 
     let finalCompletionDate = editCompletionDate;
@@ -464,11 +452,39 @@ export default function OrdemServicoList({
       appliedStatus = 'Finalizada';
     }
 
+    // If the OS is Finalizada, it leaves the scheduled/rescheduled status
+    const finalIsRescheduled = appliedStatus === 'Finalizada' ? false : editIsRescheduled;
+    const hasIsRescheduledChanged = finalIsRescheduled !== (os.isRescheduled || false);
+    const finalRescheduledVisitDate = finalIsRescheduled ? editRescheduledVisitDate : '';
+    const hasRescheduledVisitDateChanged = finalRescheduledVisitDate !== (os.rescheduledVisitDate || '');
+
+    const hasSigsChanged = 
+      sigTecnicoAberturaInput !== (os.sigTecnicoAbertura || '') ||
+      sigClienteAberturaInput !== (os.sigClienteAbertura || '') ||
+      sigClienteAberturaTypeInput !== (os.sigClienteAberturaType || 'drawn') ||
+      sigClienteAberturaTypedInput !== (os.sigClienteAberturaTyped || '') ||
+      sigTecnicoFinalInput !== (os.sigTecnicoFinal || '') ||
+      sigClienteFinalInput !== (os.sigClienteFinal || '');
+
+    const hasTecnicoChanged = assigneeTecnicoId !== (os.tecnicoId || '');
+
+    const hasFieldsChanged =
+      servicoRealizado.trim() !== (os.servicoRealizado || '') ||
+      observacoes.trim() !== (os.observacoes || '') ||
+      technicalDiagnosisText.trim() !== (os.technicalDiagnosis || '') ||
+      hasTecnicoChanged;
+
+    const hasFotosChanged = 
+      JSON.stringify(editFotos) !== JSON.stringify(os.fotos || []);
+
+    const hasContactsChanged = JSON.stringify(editAdditionalContacts) !== JSON.stringify(os.additionalContacts || []);
+
     const hasCompletionDateChanged = finalCompletionDate !== (os.completionDate || '');
     const hasStatusChanged = appliedStatus !== os.status;
     const hasPaymentMethodChanged = editPaymentMethod !== (os.paymentMethod || '');
+    const hasInstallmentsChanged = (editPaymentMethod === 'Cartão de Crédito' ? editInstallments : undefined) !== os.installments;
 
-    if (!hasStatusChanged && !hasFieldsChanged && (costInput === '') && !hasVisitDateChanged && !hasIsRescheduledChanged && !hasCompletionDateChanged && !hasSigsChanged && !hasFotosChanged && !hasPaymentMethodChanged && !hasContactsChanged) {
+    if (!hasStatusChanged && !hasFieldsChanged && (costInput === '') && !hasVisitDateChanged && !hasIsRescheduledChanged && !hasRescheduledVisitDateChanged && !hasCompletionDateChanged && !hasSigsChanged && !hasFotosChanged && !hasPaymentMethodChanged && !hasInstallmentsChanged && !hasContactsChanged) {
       alert('Por favor, informe alguma alteração para atualizar a ordem de serviço.');
       return;
     }
@@ -497,28 +513,46 @@ export default function OrdemServicoList({
       });
     }
 
-    if (hasIsRescheduledChanged) {
-      updatedOS.isRescheduled = editIsRescheduled;
-      if (editIsRescheduled) {
+    if (hasIsRescheduledChanged || hasRescheduledVisitDateChanged) {
+      updatedOS.isRescheduled = finalIsRescheduled;
+      if (finalIsRescheduled) {
+        updatedOS.rescheduledVisitDate = finalRescheduledVisitDate;
         historyEntries.push({
           date: dateFormatted,
           status: os.status,
-          description: `Visita marcada como reagendada.`,
+          description: `Visita marcada como reagendada${finalRescheduledVisitDate ? ` para ${finalRescheduledVisitDate.split('-').reverse().join('/')}` : ''}.`,
+          author: activeUserName
+        });
+      } else {
+        delete updatedOS.rescheduledVisitDate;
+        historyEntries.push({
+          date: dateFormatted,
+          status: os.status,
+          description: `Visita desmarcada como reagendada (finalizada).`,
           author: activeUserName
         });
       }
     }
 
-    if (hasPaymentMethodChanged) {
+    if (hasPaymentMethodChanged || hasInstallmentsChanged) {
       if (editPaymentMethod) {
         updatedOS.paymentMethod = editPaymentMethod;
+        if (editPaymentMethod === 'Cartão de Crédito') {
+          updatedOS.installments = editInstallments;
+        } else {
+          delete updatedOS.installments;
+        }
       } else {
         delete updatedOS.paymentMethod;
+        delete updatedOS.installments;
       }
+      const desc = editPaymentMethod === 'Cartão de Crédito' 
+        ? `Forma de pagamento atualizada para: ${editPaymentMethod} (${editInstallments}x)`
+        : `Forma de pagamento atualizada para: ${editPaymentMethod || 'Não informada'}`;
       historyEntries.push({
         date: dateFormatted,
         status: os.status,
-        description: `Forma de pagamento atualizada para: ${editPaymentMethod || 'Não informada'}`,
+        description: desc,
         author: activeUserName
       });
     }
@@ -728,6 +762,7 @@ export default function OrdemServicoList({
     setAssigneeTecnicoId('');
     setEditScheduledVisitDate('');
     setEditIsRescheduled(false);
+    setEditRescheduledVisitDate('');
     setEditAdditionalContacts([]);
     setEditCompletionDate('');
     setEditPaymentMethod('');
@@ -776,8 +811,11 @@ export default function OrdemServicoList({
     if (!page1Node) return;
     
     setIsExportingImage(true);
+    let restoreStyles: (() => void) | null = null;
     try {
       await new Promise((resolve) => setTimeout(resolve, 300));
+      
+      restoreStyles = await cleanOklabFromStylesheets();
       
       const pixelRatio = 2; // Reduced to 2 for stability and lower memory consumption
       
@@ -860,6 +898,10 @@ export default function OrdemServicoList({
       console.error('Erro ao gerar PDF:', error);
       setIsExportingImage(false);
       alert('Ocorreu um erro ao exportar o comprovante em PDF: ' + (error instanceof Error ? error.message : 'Falha na renderização da imagem.'));
+    } finally {
+      if (restoreStyles) {
+        restoreStyles();
+      }
     }
   };
 
@@ -868,9 +910,12 @@ export default function OrdemServicoList({
     if (!node) return;
     
     setIsExportingImage(true);
+    let restoreStyles: (() => void) | null = null;
     try {
       // Small timeout to allow styles/layouts to settle
       await new Promise((resolve) => setTimeout(resolve, 300));
+      
+      restoreStyles = await cleanOklabFromStylesheets();
       
       // Calculate exact dimensions of the target node to avoid viewport clips
       const originalWidth = node.offsetWidth || 512;
@@ -910,6 +955,10 @@ export default function OrdemServicoList({
       console.error('Erro ao gerar imagem:', error);
       setIsExportingImage(false);
       alert('Ocorreu um erro ao exportar o comprovante em formato de imagem. Por favor, tente novamente.');
+    } finally {
+      if (restoreStyles) {
+        restoreStyles();
+      }
     }
   };
 
@@ -1227,6 +1276,7 @@ export default function OrdemServicoList({
                 <option value="Todos">Todos os Status</option>
                 <option value="Pendente">Abertas (Pendentes)</option>
                 <option value="Aguardando Peça">Aguardando Peça</option>
+                <option value="Aguardando Reagendamento">Aguardando Reagendamento</option>
                 <option value="Finalizada">Finalizadas</option>
                 <option value="Cancelada">Canceladas</option>
               </select>
@@ -1283,29 +1333,29 @@ export default function OrdemServicoList({
                           <div className="flex-1 min-w-0">
                             {/* Mobile Layout (stacked vertically as requested) */}
                             <div className="flex flex-col gap-2.5 sm:hidden">
-                              {/* 1. Número da OS */}
-                              <div className="flex items-center gap-2">
-                                <div className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-mono font-black text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-xs shrink-0">
-                                  <span>⚙️ OS #{os.idFormatado}</span>
+                              {/* 1. Número da OS, Cliente e Status */}
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-mono font-black text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-xs shrink-0">
+                                    <span>⚙️ OS #{os.idFormatado}</span>
+                                  </div>
+                                  <span className="text-sm font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-tight truncate max-w-[180px]">
+                                    {os.clientName}
+                                  </span>
                                 </div>
-                                {os.isRescheduled && (
-                                  <span className="text-[9px] font-black uppercase text-orange-600 bg-orange-100 px-2 py-0.5 rounded border border-orange-200">Reagendado</span>
-                                )}
+                                <div className="self-start flex flex-col gap-1">
+                                  <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 block ${getStatusColor(os.status)}`}>
+                                    {os.status}
+                                  </span>
+                                  {os.isRescheduled && (
+                                    <span className="text-xs font-black uppercase text-orange-600 bg-orange-100 px-2.5 py-1 rounded border border-orange-200 self-start block">
+                                      Reagendado para: {os.rescheduledVisitDate ? safeFormatDate(os.rescheduledVisitDate) : 'Não informado'}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
-                              {/* 2. Nome do Cliente */}
-                              <div className="text-sm font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-tight">
-                                {os.clientName}
-                              </div>
-
-                              {/* 3. Status da OS */}
-                              <div className="self-start">
-                                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 block ${getStatusColor(os.status)}`}>
-                                  {os.status}
-                                </span>
-                              </div>
-
-                              {/* 4. Dados do Equipamento */}
+                              {/* 2. Dados do Equipamento */}
                               <div className="space-y-1.5 mt-1 pt-1.5 border-t border-dashed border-neutral-200 dark:border-neutral-800">
                                 <div>
                                   <span className="text-xs font-bold text-neutral-600 dark:text-neutral-300 uppercase tracking-tight block">
@@ -1316,23 +1366,25 @@ export default function OrdemServicoList({
                                   </span>
                                 </div>
                                 
-                                <div className="flex flex-col gap-1 text-[11px] mt-1.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Chamada:</span>
-                                    <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 font-mono">{safeFormatDate(os.createdAt)}</span>
+                                <div className="flex justify-between items-end mt-1.5">
+                                  <div className="flex flex-col gap-1 text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[11px] font-black text-neutral-500 uppercase tracking-widest">Chamada:</span>
+                                      <span className="text-sm font-bold text-neutral-900 dark:text-neutral-100 font-mono">{safeFormatDate(os.createdAt)}</span>
+                                    </div>
+                                    {visitDate && (
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[11px] font-black text-neutral-500 uppercase tracking-widest">Atend:</span>
+                                        <span className="text-sm font-bold text-neutral-900 dark:text-neutral-100 font-mono">{safeFormatDate(visitDate)}</span>
+                                      </div>
+                                    )}
+                                    {compDate && (
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[11px] font-black text-neutral-500 uppercase tracking-widest">Concl:</span>
+                                        <span className="text-sm font-bold text-neutral-900 dark:text-neutral-100 font-mono">{safeFormatDate(compDate)}</span>
+                                      </div>
+                                    )}
                                   </div>
-                                  {visitDate && (
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Atendimento:</span>
-                                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 font-mono">{safeFormatDate(visitDate)}</span>
-                                    </div>
-                                  )}
-                                  {compDate && (
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Conclusão:</span>
-                                      <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 font-mono">{safeFormatDate(compDate)}</span>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1358,21 +1410,21 @@ export default function OrdemServicoList({
                                   </span>
                                 </div>
                                 
-                                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-black text-neutral-400 uppercase tracking-widest">Chamada:</span>
-                                    <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300 font-mono">{safeFormatDate(os.createdAt)}</span>
+                                    <span className="text-xs font-black text-neutral-500 uppercase tracking-widest">Chamada:</span>
+                                    <span className="text-base font-extrabold text-neutral-900 dark:text-neutral-100 font-mono">{safeFormatDate(os.createdAt)}</span>
                                   </div>
                                   {visitDate && (
                                     <div className="flex items-center gap-1.5">
-                                      <span className="text-xs font-black text-neutral-400 uppercase tracking-widest">Atendimento:</span>
-                                      <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300 font-mono">{safeFormatDate(visitDate)}</span>
+                                      <span className="text-xs font-black text-neutral-500 uppercase tracking-widest">Atendimento:</span>
+                                      <span className="text-base font-extrabold text-neutral-900 dark:text-neutral-100 font-mono">{safeFormatDate(visitDate)}</span>
                                     </div>
                                   )}
                                   {compDate && (
                                     <div className="flex items-center gap-1.5">
-                                      <span className="text-xs font-black text-neutral-400 uppercase tracking-widest">Conclusão:</span>
-                                      <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300 font-mono">{safeFormatDate(compDate)}</span>
+                                      <span className="text-xs font-black text-neutral-500 uppercase tracking-widest">Conclusão:</span>
+                                      <span className="text-base font-extrabold text-neutral-900 dark:text-neutral-100 font-mono">{safeFormatDate(compDate)}</span>
                                     </div>
                                   )}
                                 </div>
@@ -1381,16 +1433,18 @@ export default function OrdemServicoList({
                           </div>
 
                           <div className="flex flex-wrap items-center gap-3 sm:gap-5 ml-auto sm:ml-0">
-                            {os.isRescheduled && (
-                              <div className="hidden sm:block text-right">
-                                <span className="text-[10px] font-black uppercase text-orange-600 bg-orange-100 px-2 py-0.5 rounded border border-orange-200">Reagendado</span>
+                            <div className="text-right hidden sm:flex flex-col items-end gap-1.5">
+                              <div>
+                                <span className="text-[8px] font-black text-neutral-400 block uppercase tracking-widest leading-none mb-1 text-right font-bold">Status OS</span>
+                                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 block ${getStatusColor(os.status)}`}>
+                                  {os.status}
+                                </span>
                               </div>
-                            )}
-                            <div className="text-right hidden sm:block">
-                              <span className="text-[8px] font-black text-neutral-400 block uppercase tracking-widest leading-none mb-0.5 text-right font-bold">Status OS</span>
-                              <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 block ${getStatusColor(os.status)}`}>
-                                {os.status}
-                              </span>
+                              {os.isRescheduled && (
+                                <span className="text-xs font-black uppercase text-orange-600 bg-orange-100 px-2.5 py-1 rounded border border-orange-200 block">
+                                  Reagendado para: {os.rescheduledVisitDate ? safeFormatDate(os.rescheduledVisitDate) : 'Não informado'}
+                                </span>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-1.5 ml-1">
@@ -1752,6 +1806,7 @@ export default function OrdemServicoList({
                                           >
                                             <option value="Pendente">Pendente</option>
                                             <option value="Aguardando Peça">Aguardando Peça</option>
+                                            <option value="Aguardando Reagendamento">Aguardando Reagendamento</option>
                                             <option value="Finalizada">Finalizada (Encerrar OS)</option>
                                             <option value="Cancelada">Cancelada</option>
                                           </select>
@@ -1945,23 +2000,38 @@ export default function OrdemServicoList({
                                         )}
                                       </div>
                                       <div className="col-span-1 sm:col-span-2 mt-2">
-                                        <div className="flex items-center gap-2">
-                                          <input
-                                            id={`edit-reschedule-${os.id}`}
-                                            type="checkbox"
-                                            checked={editIsRescheduled}
-                                            onChange={(e) => {
-                                              const checked = e.target.checked;
-                                              setEditIsRescheduled(checked);
-                                              if (checked) {
-                                                setNewStatus('Aguardando Peça');
-                                              }
-                                            }}
-                                            className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900"
-                                          />
-                                          <label htmlFor={`edit-reschedule-${os.id}`} className="text-[11px] font-black uppercase text-neutral-900 dark:text-neutral-100 cursor-pointer">
-                                            Marcar como Reagendamento
-                                          </label>
+                                        <div className="flex flex-col gap-1">
+                                          <div className="flex items-center gap-2">
+                                            <input
+                                              id={`edit-reschedule-${os.id}`}
+                                              type="checkbox"
+                                              checked={editIsRescheduled}
+                                              disabled={currentRole === 'TECNICO' && !servicoRealizado.trim()}
+                                              onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                setEditIsRescheduled(checked);
+                                                if (checked) {
+                                                  setNewStatus('Aguardando Reagendamento');
+                                                } else {
+                                                  setNewStatus(os.status === 'Aguardando Reagendamento' ? 'Pendente' : os.status);
+                                                }
+                                              }}
+                                              className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            />
+                                            <label 
+                                              htmlFor={`edit-reschedule-${os.id}`} 
+                                              className={`text-[11px] font-black uppercase text-neutral-900 dark:text-neutral-100 cursor-pointer ${
+                                                currentRole === 'TECNICO' && !servicoRealizado.trim() ? 'opacity-50 cursor-not-allowed' : ''
+                                              }`}
+                                            >
+                                              Marcar como Reagendamento
+                                            </label>
+                                          </div>
+                                          {currentRole === 'TECNICO' && !servicoRealizado.trim() && (
+                                            <p className="text-[10px] text-red-500 font-bold">
+                                              * Descreva o "Serviço Realizado" acima antes de solicitar o reagendamento.
+                                            </p>
+                                          )}
                                         </div>
                                         
                                         {editIsRescheduled && (currentRole === 'ADMIN' || currentRole === 'ATENDENTE' || currentRole === 'MASTER') && (
@@ -1975,7 +2045,9 @@ export default function OrdemServicoList({
                                               onClick={() => {
                                                 setShowEditRescheduleCalendar(!showEditRescheduleCalendar);
                                                 setShowEditVisitCalendar(false);
-                                                if (editScheduledVisitDate) {
+                                                if (editRescheduledVisitDate) {
+                                                  setEditRescheduleCalendarViewDate(new Date(editRescheduledVisitDate + 'T00:00:00'));
+                                                } else if (editScheduledVisitDate) {
                                                   setEditRescheduleCalendarViewDate(new Date(editScheduledVisitDate + 'T00:00:00'));
                                                 } else {
                                                   setEditRescheduleCalendarViewDate(new Date());
@@ -1985,8 +2057,8 @@ export default function OrdemServicoList({
                                             >
                                               <span className="flex items-center gap-1.5">
                                                 <Calendar className="w-3.5 h-3.5" />
-                                                {editScheduledVisitDate ? (
-                                                  new Date(editScheduledVisitDate + 'T00:00:00').toLocaleDateString('pt-BR')
+                                                {editRescheduledVisitDate ? (
+                                                  new Date(editRescheduledVisitDate + 'T00:00:00').toLocaleDateString('pt-BR')
                                                 ) : (
                                                   'SELECIONAR NOVA DATA'
                                                 )}
@@ -2069,7 +2141,7 @@ export default function OrdemServicoList({
                                                         return scheduledStr === dayDateStr;
                                                       }).length;
 
-                                                      const isSelected = editScheduledVisitDate === dayDateStr;
+                                                      const isSelected = editRescheduledVisitDate === dayDateStr;
                                                       const isToday = dayDateStr === todayStr;
 
                                                       cells.push(
@@ -2078,9 +2150,9 @@ export default function OrdemServicoList({
                                                           type="button"
                                                           onClick={(e) => {
                                                             e.stopPropagation();
-                                                            setEditScheduledVisitDate(dayDateStr);
+                                                            setEditRescheduledVisitDate(dayDateStr);
                                                             setShowEditRescheduleCalendar(false);
-                                                            setNewStatus('Aguardando Peça');
+                                                            setNewStatus('Pendente');
                                                           }}
                                                           className={`group relative h-7 w-7 flex flex-col items-center justify-center text-[11px] font-extrabold rounded-md transition-all cursor-pointer ${
                                                             isSelected 
@@ -2598,7 +2670,13 @@ export default function OrdemServicoList({
                                       </label>
                                       <select
                                         value={editPaymentMethod}
-                                        onChange={(e) => setEditPaymentMethod(e.target.value as any)}
+                                        onChange={(e) => {
+                                          const val = e.target.value as any;
+                                          setEditPaymentMethod(val);
+                                          if (val !== 'Cartão de Crédito') {
+                                            setEditInstallments(1);
+                                          }
+                                        }}
                                         className="w-full border border-neutral-200 dark:border-neutral-700 p-2 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none bg-neutral-50 dark:bg-neutral-900 rounded-lg"
                                       >
                                         <option value="">Selecione a forma de pagamento...</option>
@@ -2607,6 +2685,33 @@ export default function OrdemServicoList({
                                         <option value="Cartão de Débito">Cartão de Débito</option>
                                         <option value="Boleto">Boleto</option>
                                       </select>
+
+                                      {editPaymentMethod === 'Cartão de Crédito' && (
+                                        <div className="mt-2 pt-2 border-t border-dashed border-neutral-200 dark:border-neutral-700 space-y-1">
+                                          <label className="block text-[9px] font-black uppercase text-neutral-500 dark:text-neutral-400">
+                                            Parcelas
+                                          </label>
+                                          <select
+                                            value={editInstallments}
+                                            onChange={(e) => setEditInstallments(Number(e.target.value))}
+                                            className="w-full border border-neutral-200 dark:border-neutral-700 p-1.5 text-xs font-bold text-neutral-900 dark:text-neutral-100 focus:outline-none bg-neutral-50 dark:bg-neutral-900 rounded-md"
+                                          >
+                                            {[...Array(12)].map((_, i) => {
+                                              const count = i + 1;
+                                              const amt = Number(costInput || 0);
+                                              const valuePerInstallment = amt / count;
+                                              return (
+                                                <option key={count} value={count}>
+                                                  {count}x de R$ {valuePerInstallment.toFixed(2)} (Sem juros)
+                                                </option>
+                                              );
+                                            })}
+                                          </select>
+                                          <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 font-mono text-center mt-1">
+                                            {editInstallments}x de R$ {(Number(costInput || 0) / editInstallments).toFixed(2)}
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
 
                                     {/* 2. Desconto */}
@@ -3111,7 +3216,7 @@ export default function OrdemServicoList({
                     <span className="text-[8px] font-semibold bg-emerald-600 text-white px-1.5 py-0.5 uppercase tracking-widest">Pago / Quitado</span>
                   </div>
                   <p className="text-[9.2px] font-bold text-neutral-800 leading-relaxed text-justify">
-                    Declaramos que o serviço especificado nesta Ordem de Serviço foi concluído e testado. Confirmamos o recebimento e a quitação integral do valor de <strong className="font-extrabold uppercase text-emerald-900 text-[10px]">R$ {(osToExport.totalCostValue || 0).toFixed(2)}</strong> pago à Assistência Técnica / Técnico Responsável{osToExport.paymentMethod ? ` através da forma de pagamento: ${osToExport.paymentMethod}` : ''}, sendo dado com este instrumento plena e geral quitação de direitos pelo reparo do equipamento, validado pelas assinaturas registradas abaixo.
+                    Declaramos que o serviço especificado nesta Ordem de Serviço foi concluído e testado. Confirmamos o recebimento e a quitação integral do valor de <strong className="font-extrabold uppercase text-emerald-900 text-[10px]">R$ {(osToExport.totalCostValue || 0).toFixed(2)}</strong> pago à Assistência Técnica / Técnico Responsável{osToExport.paymentMethod ? ` através da forma de pagamento: ${osToExport.paymentMethod}${osToExport.paymentMethod === 'Cartão de Crédito' && osToExport.installments ? ` (${osToExport.installments}x de R$ ${(osToExport.totalCostValue / osToExport.installments).toFixed(2)})` : ''}` : ''}, sendo dado com este instrumento plena e geral quitação de direitos pelo reparo do equipamento, validado pelas assinaturas registradas abaixo.
                   </p>
                 </div>
               )}

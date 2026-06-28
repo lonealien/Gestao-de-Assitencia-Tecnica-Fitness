@@ -1,12 +1,12 @@
 import { 
-  LayoutDashboard, ClipboardList, Users, Sun, Moon, LogOut, Settings as SettingsIcon, Plus, Dumbbell
+  LayoutDashboard, ClipboardList, Users, Sun, Moon, LogOut, Settings as SettingsIcon, Plus, Dumbbell, FileText
 } from 'lucide-react';
 import { AppUser, StoreSettings } from '../types';
 
 interface NavigationProps {
   loggedUser: AppUser;
   activeTab: string;
-  setActiveTab: (tab: 'dashboard' | 'ordens' | 'usuarios') => void;
+  setActiveTab: (tab: 'dashboard' | 'ordens' | 'usuarios' | 'orcamentos') => void;
   isDarkMode: boolean;
   setIsDarkMode: (dark: boolean) => void;
   onLogout: () => void;
@@ -38,7 +38,7 @@ export default function Navigation({
   isExpired,
   onShowBlockedAlert
 }: NavigationProps) {
-  const handleAction = (tab: 'dashboard' | 'ordens' | 'usuarios', checkExpired = false) => {
+  const handleAction = (tab: 'dashboard' | 'ordens' | 'usuarios' | 'orcamentos', checkExpired = false) => {
     if (checkExpired && isExpired) {
       onShowBlockedAlert?.("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador.");
       return;
@@ -112,19 +112,21 @@ export default function Navigation({
                 {loggedUser.role === 'TECNICO' ? 'Minhas OS & Agenda' : 'Ordens (OS)'}
               </button>
 
-              {(loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE') && (
+              {loggedUser.role !== 'TECNICO' && (
                 <button
-                  onClick={() => handleAction('usuarios', true)}
+                  onClick={() => handleAction('orcamentos')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider border border-neutral-200 dark:border-neutral-700 transition-all cursor-pointer ${
-                    activeTab === 'usuarios'
+                    activeTab === 'orcamentos'
                       ? 'bg-yellow-300 dark:bg-yellow-400 text-neutral-900 shadow-sm dark:shadow-none'
                       : 'bg-white dark:bg-neutral-800 hover:bg-neutral-100 text-neutral-900 dark:text-neutral-100'
-                  }`}
+                    }`}
                 >
-                  <Users className="w-4 h-4 stroke-[2.5]" />
-                  Usuários / Acessos
+                  <FileText className="w-4 h-4 stroke-[2.5]" />
+                  Orçamentos
                 </button>
               )}
+
+
             </nav>
 
             <div className="flex items-center justify-between lg:justify-end gap-2 lg:border-l-2 lg:border-black lg:pl-4 mt-2 lg:mt-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-neutral-200 dark:border-neutral-700">

@@ -4,9 +4,10 @@ import {
   loadTecnicos, saveTecnicos, 
   loadOrdens, saveOrdens,
   loadUsers, saveUsers,
-  loadSettings, saveSettings
+  loadSettings, saveSettings,
+  loadOrcamentos, saveOrcamentos
 } from './utils';
-import { AssistenciaTecnica, Tecnico, OrdemServico, AppUser, StoreSettings } from './types';
+import { AssistenciaTecnica, Tecnico, OrdemServico, AppUser, StoreSettings, Orcamento } from './types';
 import { MANUAL_USERS } from './usersConfig';
 import { PRECONFIG_COMPANIES, PRECONFIG_COMPANY_USERS } from './companiesConfig';
 
@@ -14,6 +15,8 @@ import { PRECONFIG_COMPANIES, PRECONFIG_COMPANY_USERS } from './companiesConfig'
 import DashboardStats from './components/DashboardStats';
 import OrdemServicoForm from './components/OrdemServicoForm';
 import OrdemServicoList from './components/OrdemServicoList';
+import OrcamentoForm from './components/OrcamentoForm';
+import OrcamentoList from './components/OrcamentoList';
 import LoginScreen from './components/LoginScreen';
 import UserManagement from './components/UserManagement';
 import SettingsModal from './components/SettingsModal';
@@ -26,7 +29,7 @@ import { shouldBackupToday } from './backupService';
 
 import { 
   Building2, ClipboardList, LayoutDashboard, Dumbbell, 
-  Plus, Shield, Hammer, Users, HelpCircle, LogOut, ShieldAlert, Settings as SettingsIcon, Moon, Sun, MessageCircle
+  Plus, Shield, Hammer, Users, HelpCircle, LogOut, ShieldAlert, Settings as SettingsIcon, Moon, Sun, MessageCircle, FileText
 } from 'lucide-react';
 import { 
   syncCollection, saveToFirestore, deleteFromFirestore, 
@@ -40,6 +43,7 @@ export default function App() {
   const [assistencias, setAssistencias] = useState<AssistenciaTecnica[]>(() => loadAssistencias());
   const [tecnicos, setTecnicos] = useState<Tecnico[]>(() => loadTecnicos());
   const [ordens, setOrdens] = useState<OrdemServico[]>(() => loadOrdens());
+  const [orcamentos, setOrcamentos] = useState<Orcamento[]>(() => loadOrcamentos());
   const [usuarios, setUsuarios] = useState<AppUser[]>(() => loadUsers());
   const masterUser = usuarios.find(u => u.role === 'MASTER');
   const masterPhone = masterUser?.phone || '';
@@ -56,7 +60,7 @@ export default function App() {
   const [showBackupModal, setShowBackupModal] = useState(false);
 
   // UI state toggles
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'ordens' | 'usuarios'>(() => {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'ordens' | 'usuarios' | 'orcamentos'>(() => {
     const savedUser = localStorage.getItem('logged_user_fitness');
     if (savedUser) {
       try {
@@ -67,6 +71,8 @@ export default function App() {
     return 'ordens';
   });
   const [showAddOSForm, setShowAddOSForm] = useState(false);
+  const [showAddOrcamentoForm, setShowAddOrcamentoForm] = useState(false);
+  const [editingOrcamento, setEditingOrcamento] = useState<Orcamento | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -141,6 +147,20 @@ export default function App() {
       setOrdens(data);
       saveOrdens(data);
     });
+    const unsubOrcamentos = syncCollection<Orcamento>('orcamentos', (data) => {
+      const nowStr = new Date().toISOString();
+      const checkedData = data.map(o => {
+        if (o.status === 'Pendente' && o.expiresAt && nowStr > o.expiresAt) {
+          const updated = { ...o, status: 'Expirado' as const };
+          // Save to firestore asynchronously to update persistent state
+          saveToFirestore('orcamentos', updated);
+          return updated;
+        }
+        return o;
+      });
+      setOrcamentos(checkedData);
+      saveOrcamentos(checkedData);
+    });
     const unsubUsuarios = syncCollection<AppUser>('usuarios', (data) => {
       setUsuarios(data);
       saveUsers(data);
@@ -186,6 +206,13 @@ export default function App() {
           const localOrdens = loadOrdens();
           localOrdens.forEach(o => saveToFirestore('ordens', o));
         }
+
+        const orcamentosSnap = await getDocs(collection(db, 'orcamentos'));
+        if (orcamentosSnap.empty) {
+          console.log('Seeding orcamentos...');
+          const localOrcamentos = loadOrcamentos();
+          localOrcamentos.forEach(o => saveToFirestore('orcamentos', o));
+        }
       } catch (err) {
         console.error('Falha na migração automática e sincronização de dados:', err);
       }
@@ -214,6 +241,7 @@ export default function App() {
       unsubAssistencias();
       unsubTecnicos();
       unsubOrdens();
+      unsubOrcamentos();
       unsubUsuarios();
       unsubSettings();
     };
@@ -357,6 +385,104 @@ export default function App() {
     setActiveTab('ordens');
   };
 
+  // Add Budget (Orçamento)
+  const handleRegisterOrcamento = (newOrc: Orcamento) => {
+    if (isExpired) {
+      setBlockedModalMessage("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador.");
+      return;
+    }
+    const orcWithTenant = {
+      ...newOrc,
+      assistenciaId: loggedUser?.assistenciaId || ''
+    };
+    saveToFirestore('orcamentos', orcWithTenant);
+    setShowAddOrcamentoForm(false);
+    setActiveTab('orcamentos');
+  };
+
+  // Update Budget (Orçamento)
+  const handleUpdateOrcamento = (updatedOrc: Orcamento) => {
+    if (isExpired) {
+      setBlockedModalMessage("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador.");
+      return;
+    }
+    saveToFirestore('orcamentos', updatedOrc);
+  };
+
+  // Delete Budget (Orçamento)
+  const handleDeleteOrcamento = (id: string) => {
+    deleteFromFirestore('orcamentos', id);
+  };
+
+  // Convert Budget (Orçamento) to Service Order (OS)
+  const handleConvertToOS = (orc: Orcamento) => {
+    if (isExpired) {
+      setBlockedModalMessage("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador.");
+      return;
+    }
+
+    const customIdNum = Math.floor(1000 + Math.random() * 9000);
+    const formattedDate = new Date().toISOString();
+
+    const newOS: OrdemServico = {
+      id: 'os-' + Date.now(),
+      idFormatado: `OS-${customIdNum}`,
+      assistenciaId: orc.assistenciaId || loggedUser?.assistenciaId || '',
+      tecnicoId: orc.tecnicoId,
+      clientName: orc.clientName,
+      clientDocument: orc.clientDocument,
+      clientPhone: orc.clientPhone,
+      additionalContacts: orc.additionalContacts,
+      clientEmail: orc.clientEmail,
+      address: orc.address,
+      addressNumber: orc.addressNumber,
+      addressComplement: orc.addressComplement,
+      clientZipCode: orc.clientZipCode,
+      clientCity: orc.clientCity,
+      clientState: orc.clientState,
+      equipmentType: orc.equipmentType,
+      equipmentBrand: orc.equipmentBrand,
+      equipmentModel: orc.equipmentModel,
+      reportedIssue: orc.reportedIssue,
+      technicalDiagnosis: orc.technicalDiagnosis || '',
+      status: 'Pendente',
+      createdAt: formattedDate,
+      totalCostValue: orc.totalCostValue,
+      taxaDeslocamento: orc.taxaDeslocamento,
+      partsCostValue: orc.partsCostValue || 0,
+      parts: orc.parts || [],
+      laborCostValue: orc.laborCostValue || 0,
+      discountValue: orc.discountValue || 0,
+      discountType: orc.discountType || 'fixed',
+      isLaborCourtesy: orc.isLaborCourtesy,
+      isTravelCourtesy: orc.isTravelCourtesy,
+      paymentMethod: orc.paymentMethod,
+      installments: orc.installments,
+      history: [
+        {
+          date: formattedDate,
+          status: 'Pendente',
+          description: `Ordem de Serviço gerada automaticamente a partir do Orçamento ${orc.idFormatado}.`,
+          author: loggedUser?.name || 'Sistema'
+        }
+      ]
+    };
+
+    const updatedOrcamento: Orcamento = {
+      ...orc,
+      status: 'Transformado em OS',
+      linkedOsId: newOS.id,
+      linkedOsFormatado: newOS.idFormatado,
+      convertedAt: formattedDate
+    };
+
+    saveToFirestore('ordens', newOS);
+    saveToFirestore('orcamentos', updatedOrcamento);
+
+    alert(`Orçamento ${orc.idFormatado} transformado com sucesso na Ordem de Serviço ${newOS.idFormatado}!`);
+    setActiveTab('ordens');
+  };
+
   // Update OS properties (e.g. status flow, history, diagnosis)
   const handleUpdateOS = (updatedOS: OrdemServico) => {
     if (isExpired) {
@@ -395,6 +521,10 @@ export default function App() {
     for (const o of ordens) {
       await deleteFromFirestore('ordens', o.id);
     }
+    // 3.5 Delete all orcamentos from Firestore
+    for (const orc of orcamentos) {
+      await deleteFromFirestore('orcamentos', orc.id);
+    }
     // 4. Delete all usuarios from Firestore except master (usr-master-clemente or username clemente)
     for (const u of usuarios) {
       if (u.id !== 'usr-master-clemente' && u.username !== 'clemente') {
@@ -405,6 +535,7 @@ export default function App() {
     localStorage.removeItem('assistencias_fitness_v2');
     localStorage.removeItem('tecnicos_fitness_v2');
     localStorage.removeItem('ordens_fitness_v2');
+    localStorage.removeItem('orcamentos_fitness_v2');
     localStorage.removeItem('usuarios_fitness_v2');
     
     // Rewrite local master details
@@ -562,7 +693,27 @@ export default function App() {
         )}
 
         {/* Outer view screens matching chosen tab or state forms overlays */}
-        {showAddOSForm && !isExpired ? (
+        {showAddOrcamentoForm && !isExpired ? (
+          <OrcamentoForm
+            assistencias={assistencias}
+            usuarios={tenantUsuarios}
+            onAdd={handleRegisterOrcamento}
+            onCancel={() => setShowAddOrcamentoForm(false)}
+            defaultAssistenciaId={loggedUser.assistenciaId}
+          />
+        ) : editingOrcamento && !isExpired ? (
+          <OrcamentoForm
+            assistencias={assistencias}
+            usuarios={tenantUsuarios}
+            onAdd={(updatedOrc) => {
+              handleUpdateOrcamento(updatedOrc);
+              setEditingOrcamento(null);
+            }}
+            onCancel={() => setEditingOrcamento(null)}
+            defaultAssistenciaId={loggedUser.assistenciaId}
+            editingOrcamento={editingOrcamento}
+          />
+        ) : showAddOSForm && !isExpired ? (
           <OrdemServicoForm
             assistencias={assistencias}
             usuarios={tenantUsuarios}
@@ -578,6 +729,7 @@ export default function App() {
               <DashboardStats
                 ordens={tenantOrdens}
                 onOpenNewOSForm={() => setShowAddOSForm(true)}
+                onOpenNewOrcamentoForm={() => setShowAddOrcamentoForm(true)}
                 currentRole={loggedUser.role}
                 isReadOnly={loggedUser.isReadOnly || isExpired}
                 onEditOS={(id) => {
@@ -657,83 +809,59 @@ export default function App() {
               </div>
             )}
 
-            {activeTab === 'usuarios' && (loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE') && (
-              <UserManagement
-                usuarios={tenantUsuarios}
-                assistencias={assistencias}
-                tecnicos={tenantTecnicos}
-                currentUser={{ ...loggedUser, isReadOnly: loggedUser.isReadOnly || isExpired }}
-                storeSettings={activeStoreSettings}
-                onShowBlockedAlert={(msg) => setBlockedModalMessage(msg)}
-                onAddUser={(newUsr) => {
-                  const usrWithTenant = {
-                    ...newUsr,
-                    assistenciaId: loggedUser.assistenciaId || newUsr.assistenciaId
-                  };
-                  saveToFirestore('usuarios', usrWithTenant);
-                }}
-                onRestoreBackup={async (backup) => {
-                  if (backup.assistencia) {
-                    await saveToFirestore('assistencias', backup.assistencia);
-                  }
-                  if (backup.ordens && backup.ordens.length > 0) {
-                    for (const o of backup.ordens) {
-                      await saveToFirestore('ordens', o);
-                    }
-                  }
-                  if (backup.tecnicos && backup.tecnicos.length > 0) {
-                    for (const t of backup.tecnicos) {
-                      await saveToFirestore('tecnicos', t);
-                    }
-                  }
-                  if (backup.usuarios && backup.usuarios.length > 0) {
-                    for (const u of backup.usuarios) {
-                      await saveToFirestore('usuarios', u);
-                    }
-                  }
-                }}
-                onDeleteUser={(usrId) => {
-                  deleteFromFirestore('usuarios', usrId);
-                }}
-                onToggleUserActive={(usrId) => {
-                  const user = usuarios.find(u => u.id === usrId);
-                  if (user) {
-                    saveToFirestore('usuarios', { ...user, active: !user.active });
-                  }
-                }}
-                onAddTecnicoAndUser={(newTec, login, pass) => {
-                  // 1. Save technical registry
-                  const tecWithTenant = {
-                    ...newTec,
-                    assistenciaId: loggedUser.assistenciaId || ''
-                  };
-                  saveToFirestore('tecnicos', tecWithTenant);
+            {activeTab === 'orcamentos' && loggedUser.role !== 'TECNICO' && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="text-left">
+                    <h3 className="text-lg font-black uppercase text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                      <FileText className="w-5 h-5 text-neutral-900 dark:text-neutral-100" />
+                      Painel de Orçamentos de Serviços
+                    </h3>
+                    <p className="text-xs text-neutral-500 font-bold">
+                      Simulações, orçamentos preventivos e gerenciamento de propostas comerciais de reparo fitness.
+                    </p>
+                  </div>
+                  {(loggedUser.role === 'ADMIN' || loggedUser.role === 'ASSISTENCIA_GERENTE' || loggedUser.role === 'ATENDENTE') && (
+                    <button
+                      onClick={() => {
+                        if (isExpired) {
+                          setBlockedModalMessage("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Criação de orçamento suspensa.");
+                          return;
+                        }
+                        setShowAddOrcamentoForm(true);
+                      }}
+                      className="bg-neutral-900 dark:bg-neutral-100 hover:bg-neutral-800 text-white dark:text-neutral-900 text-xs font-black uppercase tracking-widest px-5 py-3 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm dark:shadow-none hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer self-start"
+                    >
+                      <Plus className="w-4 h-4 stroke-[3]" />
+                      Gerar Orçamento
+                    </button>
+                  )}
+                </div>
 
-                  // 2. Save user login
-                  const newUserAccount: AppUser = {
-                    id: 'usr-' + Date.now(),
-                    name: newTec.name,
-                    username: login,
-                    email: newTec.email || `${login}@gestaoservico.com`,
-                    password: pass,
-                    role: 'TECNICO',
-                    tecnicoId: newTec.id
-                  };
-                  if (loggedUser.assistenciaId) {
-                    newUserAccount.assistenciaId = loggedUser.assistenciaId;
-                  }
-                  saveToFirestore('usuarios', newUserAccount);
-                }}
-                onUpdateUser={(updatedUsr) => {
-                  saveToFirestore('usuarios', updatedUsr);
-                  // Update loggedUser state if updating current user
-                  if (loggedUser && loggedUser.id === updatedUsr.id) {
-                    setLoggedUser(updatedUsr);
-                    localStorage.setItem('logged_user_fitness', JSON.stringify(updatedUsr));
-                  }
-                }}
-              />
+                <OrcamentoList
+                  orcamentos={orcamentos.filter(o => o.assistenciaId === loggedUser.assistenciaId || loggedUser.role === 'MASTER')}
+                  assistencias={assistencias}
+                  usuarios={tenantUsuarios}
+                  currentRole={loggedUser.role}
+                  activeRoleEntityId={getActiveUserEntityId()}
+                  isReadOnly={loggedUser.isReadOnly || isExpired}
+                  onUpdateOrcamento={handleUpdateOrcamento}
+                  onDeleteOrcamento={handleDeleteOrcamento}
+                  onConvertToOS={handleConvertToOS}
+                  onShowBlockedAlert={(msg) => setBlockedModalMessage(msg)}
+                  onEditOrcamento={(orc) => {
+                    if (loggedUser.isReadOnly || isExpired) {
+                      setBlockedModalMessage("Acesso restrito: A assinatura da empresa está vencida ou o acesso foi bloqueado pelo administrador. Edição suspensa.");
+                      return;
+                    }
+                    setEditingOrcamento(orc);
+                  }}
+                  storeSettings={activeStoreSettings}
+                />
+              </div>
             )}
+
+
 
             {activeTab !== 'ordens' && (
               <OrdemServicoList
@@ -804,6 +932,78 @@ export default function App() {
             }
           }} 
           onClose={() => setShowSettings(false)} 
+          usuarios={tenantUsuarios}
+          assistencias={assistencias}
+          tecnicos={tenantTecnicos}
+          currentUser={{ ...loggedUser, isReadOnly: loggedUser.isReadOnly || isExpired }}
+          onAddUser={(newUsr) => {
+            const usrWithTenant = {
+              ...newUsr,
+              assistenciaId: loggedUser.assistenciaId || newUsr.assistenciaId
+            };
+            saveToFirestore('usuarios', usrWithTenant);
+          }}
+          onRestoreBackup={async (backup) => {
+            if (backup.assistencia) {
+              await saveToFirestore('assistencias', backup.assistencia);
+            }
+            if (backup.ordens && backup.ordens.length > 0) {
+              for (const o of backup.ordens) {
+                await saveToFirestore('ordens', o);
+              }
+            }
+            if (backup.tecnicos && backup.tecnicos.length > 0) {
+              for (const t of backup.tecnicos) {
+                await saveToFirestore('tecnicos', t);
+              }
+            }
+            if (backup.usuarios && backup.usuarios.length > 0) {
+              for (const u of backup.usuarios) {
+                await saveToFirestore('usuarios', u);
+              }
+            }
+          }}
+          onDeleteUser={(usrId) => {
+            deleteFromFirestore('usuarios', usrId);
+          }}
+          onToggleUserActive={(usrId) => {
+            const user = usuarios.find(u => u.id === usrId);
+            if (user) {
+              saveToFirestore('usuarios', { ...user, active: !user.active });
+            }
+          }}
+          onAddTecnicoAndUser={(newTec, login, pass) => {
+            // 1. Save technical registry
+            const tecWithTenant = {
+              ...newTec,
+              assistenciaId: loggedUser.assistenciaId || ''
+            };
+            saveToFirestore('tecnicos', tecWithTenant);
+
+            // 2. Save user login
+            const newUserAccount: AppUser = {
+              id: 'usr-' + Date.now(),
+              name: newTec.name,
+              username: login,
+              email: newTec.email || `${login}@gestaoservico.com`,
+              password: pass,
+              role: 'TECNICO',
+              tecnicoId: newTec.id
+            };
+            if (loggedUser.assistenciaId) {
+              newUserAccount.assistenciaId = loggedUser.assistenciaId;
+            }
+            saveToFirestore('usuarios', newUserAccount);
+          }}
+          onUpdateUser={(updatedUsr) => {
+            saveToFirestore('usuarios', updatedUsr);
+            // Update loggedUser state if updating current user
+            if (loggedUser && loggedUser.id === updatedUsr.id) {
+              setLoggedUser(updatedUsr);
+              localStorage.setItem('logged_user_fitness', JSON.stringify(updatedUsr));
+            }
+          }}
+          onShowBlockedAlert={(msg) => setBlockedModalMessage(msg)}
         />
       )}
       {blockedModalMessage && (

@@ -72,13 +72,31 @@ export const syncCollection = <T extends { id: string }>(
   );
 };
 
+// Helper to recursively remove undefined fields for Firestore compatibility
+function removeUndefinedFields(obj: any): any {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefinedFields);
+  }
+  const cleaned: any = {};
+  for (const key of Object.keys(obj)) {
+    if (obj[key] !== undefined) {
+      cleaned[key] = removeUndefinedFields(obj[key]);
+    }
+  }
+  return cleaned;
+}
+
 // Generic save function
 export const saveToFirestore = async <T extends { id: string }>(
   collectionName: string, 
   data: T
 ) => {
   try {
-    await setDoc(doc(db, collectionName, data.id), data);
+    const cleanedData = removeUndefinedFields(data);
+    await setDoc(doc(db, collectionName, data.id), cleanedData);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `${collectionName}/${data.id}`);
   }
@@ -113,7 +131,8 @@ export const syncSettings = (callback: (settings: StoreSettings) => void) => {
 
 export const saveSettingsToFirestore = async (settings: StoreSettings) => {
   try {
-    await setDoc(doc(db, 'settings', 'current'), settings);
+    const cleanedSettings = removeUndefinedFields(settings);
+    await setDoc(doc(db, 'settings', 'current'), cleanedSettings);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'settings/current');
   }

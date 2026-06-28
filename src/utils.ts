@@ -1,4 +1,4 @@
-import { AssistenciaTecnica, Tecnico, OrdemServico, AppUser } from './types';
+import { AssistenciaTecnica, Tecnico, OrdemServico, AppUser, Orcamento } from './types';
 import { INITIAL_ASSISTENCIAS, INITIAL_TECNICOS, INITIAL_OS } from './initialData';
 import { MANUAL_USERS } from './usersConfig';
 import { PRECONFIG_COMPANIES, PRECONFIG_COMPANY_USERS } from './companiesConfig';
@@ -126,6 +126,23 @@ export function saveOrdens(data: OrdemServico[]) {
   localStorage.setItem('ordens_fitness_v2', JSON.stringify(data));
 }
 
+export function loadOrcamentos(): Orcamento[] {
+  const data = localStorage.getItem('orcamentos_fitness_v2');
+  if (!data) {
+    return [];
+  }
+  try {
+    return JSON.parse(data);
+  } catch (e) {
+    console.error('Falha ao ler orçamentos do localStorage', e);
+    return [];
+  }
+}
+
+export function saveOrcamentos(data: Orcamento[]) {
+  localStorage.setItem('orcamentos_fitness_v2', JSON.stringify(data));
+}
+
 import { StoreSettings } from './types';
 
 const INITIAL_SETTINGS: StoreSettings = {
@@ -190,4 +207,71 @@ export function maskDocument(value: string): string {
 export function maskCEP(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 8);
   return digits.replace(/(\d{5})(\d)/, '$1-$2');
+}
+
+export async function cleanOklabFromStylesheets(): Promise<() => void> {
+  const elementsToDisable: Array<{ element: HTMLStyleElement | HTMLLinkElement; originalDisabled: boolean }> = [];
+  const tempStyleElements: HTMLStyleElement[] = [];
+
+  // Find all active style and link elements
+  const stylesAndLinks = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')) as Array<HTMLStyleElement | HTMLLinkElement>;
+
+  for (const el of stylesAndLinks) {
+    let cssText = '';
+
+    if (el.tagName.toLowerCase() === 'style') {
+      cssText = el.textContent || '';
+    } else if (el.tagName.toLowerCase() === 'link') {
+      const linkEl = el as HTMLLinkElement;
+      try {
+        const response = await fetch(linkEl.href);
+        if (response.ok) {
+          cssText = await response.text();
+        }
+      } catch (e) {
+        console.warn('Could not fetch stylesheet:', linkEl.href, e);
+        // Fallback to CSSOM if fetch fails (e.g. CORS)
+        try {
+          const sheet = Array.from(document.styleSheets).find(s => s.href === linkEl.href);
+          if (sheet && sheet.cssRules) {
+            cssText = Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n');
+          }
+        } catch (cssomError) {
+          console.warn('Could not read from CSSOM either:', cssomError);
+        }
+      }
+    }
+
+    if (cssText) {
+      // Replace oklab and oklch functions with solid rgb value
+      const cleanedCss = cssText
+        .replace(/oklab\([^)]+\)/g, 'rgb(0,0,0)')
+        .replace(/oklch\([^)]+\)/g, 'rgb(0,0,0)');
+
+      // Create temporary style tag with cleaned CSS
+      const tempStyle = document.createElement('style');
+      tempStyle.setAttribute('data-temp-clean', 'true');
+      tempStyle.textContent = cleanedCss;
+      document.head.appendChild(tempStyle);
+      tempStyleElements.push(tempStyle);
+
+      // Disable the original element
+      elementsToDisable.push({
+        element: el,
+        originalDisabled: el.disabled
+      });
+      el.disabled = true;
+    }
+  }
+
+  const restore = () => {
+    // Remove temporary style elements
+    tempStyleElements.forEach(el => el.remove());
+    // Restore original stylesheets state
+    elementsToDisable.forEach(item => {
+      item.element.disabled = item.originalDisabled;
+    });
+  };
+
+  return restore;
 }

@@ -1,14 +1,28 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { StoreSettings } from '../types';
+import { StoreSettings, AppUser, AssistenciaTecnica, Tecnico } from '../types';
 import { Settings as SettingsIcon, Image as ImageIcon, Upload, Crop as CropIcon } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import { maskPhone, maskDocument, maskCEP } from '../utils';
+import UserManagement from './UserManagement';
 
 interface SettingsModalProps {
   currentSettings: StoreSettings;
   onSave: (settings: StoreSettings) => void;
   onClose: () => void;
   isGlobalAdmin?: boolean;
+
+  // UserManagement Props
+  usuarios: AppUser[];
+  assistencias: AssistenciaTecnica[];
+  tecnicos: Tecnico[];
+  currentUser: AppUser;
+  onAddUser: (user: AppUser) => void;
+  onDeleteUser: (userId: string) => void;
+  onToggleUserActive: (userId: string) => void;
+  onAddTecnicoAndUser?: (newTecnico: Tecnico, userLogin: string, userPass: string) => void;
+  onUpdateUser?: (user: AppUser) => void;
+  onRestoreBackup?: (backup: any) => Promise<void>;
+  onShowBlockedAlert?: (message: string) => void;
 }
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -19,7 +33,24 @@ const createImage = (url: string): Promise<HTMLImageElement> =>
     image.src = url;
   });
 
-export default function SettingsModal({ currentSettings, onSave, onClose, isGlobalAdmin = false }: SettingsModalProps) {
+export default function SettingsModal({
+  currentSettings,
+  onSave,
+  onClose,
+  isGlobalAdmin = false,
+  usuarios,
+  assistencias,
+  tecnicos,
+  currentUser,
+  onAddUser,
+  onDeleteUser,
+  onToggleUserActive,
+  onAddTecnicoAndUser,
+  onUpdateUser,
+  onRestoreBackup,
+  onShowBlockedAlert
+}: SettingsModalProps) {
+  const [activeTab, setActiveTab] = useState<'geral' | 'usuarios'>('geral');
   const [name, setName] = useState(currentSettings.name);
   const [logoUrl, setLogoUrl] = useState(currentSettings.logoUrl || '');
   const [cnpj, setCnpj] = useState(currentSettings.cnpj || '');
@@ -93,7 +124,9 @@ export default function SettingsModal({ currentSettings, onSave, onClose, isGlob
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 w-full max-w-md shadow-sm dark:shadow-none flex flex-col max-h-[90vh]">
+      <div className={`bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 w-full ${
+        activeTab === 'usuarios' ? 'max-w-5xl' : 'max-w-md'
+      } shadow-sm dark:shadow-none flex flex-col max-h-[90vh] transition-all duration-300`}>
         <div className="bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 p-4 flex items-center justify-between border-b-4 border-black shrink-0">
           <div className="flex items-center gap-2">
             <SettingsIcon className="w-5 h-5 text-yellow-300" />
@@ -109,7 +142,50 @@ export default function SettingsModal({ currentSettings, onSave, onClose, isGlob
           </button>
         </div>
 
-        {imgSrc ? (
+        {/* Tab Switcher */}
+        <div className="flex border-b-2 border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('geral')}
+            className={`flex-1 py-3 text-xs font-black uppercase tracking-wider text-center border-r-2 border-neutral-200 dark:border-neutral-700 transition-colors ${
+              activeTab === 'geral'
+                ? 'bg-yellow-300 text-neutral-950 dark:bg-yellow-400 dark:text-neutral-950'
+                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+            }`}
+          >
+            Dados da Assistência
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('usuarios')}
+            className={`flex-1 py-3 text-xs font-black uppercase tracking-wider text-center transition-colors ${
+              activeTab === 'usuarios'
+                ? 'bg-yellow-300 text-neutral-950 dark:bg-yellow-400 dark:text-neutral-950'
+                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+            }`}
+          >
+            Usuários
+          </button>
+        </div>
+
+        {activeTab === 'usuarios' ? (
+          <div className="p-6 overflow-y-auto flex-1">
+            <UserManagement
+              usuarios={usuarios}
+              assistencias={assistencias}
+              tecnicos={tecnicos}
+              currentUser={currentUser}
+              onAddUser={onAddUser}
+              onDeleteUser={onDeleteUser}
+              onToggleUserActive={onToggleUserActive}
+              onAddTecnicoAndUser={onAddTecnicoAndUser}
+              onUpdateUser={onUpdateUser}
+              onRestoreBackup={onRestoreBackup}
+              storeSettings={currentSettings}
+              onShowBlockedAlert={onShowBlockedAlert}
+            />
+          </div>
+        ) : imgSrc ? (
           <div className="p-6 space-y-6 overflow-y-auto">
             <div className="relative w-full h-[300px] sm:h-[400px] border border-neutral-200 dark:border-neutral-700 bg-neutral-100">
               <Cropper

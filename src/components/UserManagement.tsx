@@ -344,13 +344,13 @@ export default function UserManagement({
   });
 
   return (
-    <div className="bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-sm dark:shadow-none p-6 space-y-6">
+    <div className="space-y-6">
       
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b-4 border-black pb-4 gap-4">
         <div>
           <h3 className="text-xl font-black uppercase tracking-tight text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-neutral-900 dark:text-neutral-100 stroke-[2.5]" />
-            Gerenciamento de Acessos & Usuários
+            Usuários
           </h3>
 
         </div>

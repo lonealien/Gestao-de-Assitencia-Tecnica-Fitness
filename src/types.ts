@@ -29,7 +29,15 @@ export type OSStatus =
   | 'Pendente' 
   | 'Aguardando Peça' 
   | 'Finalizada' 
-  | 'Cancelada';
+  | 'Cancelada'
+  | 'Aguardando Reagendamento';
+
+export type OrcamentoStatus = 
+  | 'Pendente' 
+  | 'Aprovado' 
+  | 'Reprovado' 
+  | 'Transformado em OS'
+  | 'Expirado';
 
 export type OSPriority = 'Baixa' | 'Média' | 'Alta';
 
@@ -99,6 +107,7 @@ export interface OrdemServico {
   createdAt: string;
   scheduledVisitDate?: string;
   isRescheduled?: boolean;
+  rescheduledVisitDate?: string;
   deliveryTargetDate?: string;
   completionDate?: string;
   totalCostValue: number;
@@ -125,6 +134,51 @@ export interface OrdemServico {
   fotosDepois?: string[];
   fotos?: OSPhoto[];
   paymentMethod?: 'Pix/À vista' | 'Cartão de Crédito' | 'Cartão de Débito' | 'Boleto';
+  installments?: number;
+}
+
+export interface Orcamento {
+  id: string;
+  idFormatado: string;
+  assistenciaId: string;
+  tecnicoId: string | null;
+  clientName: string;
+  clientPhone: string;
+  additionalContacts?: ContactInfo[];
+  clientEmail: string;
+  address: string;
+  addressNumber?: string;
+  addressComplement?: string;
+  clientZipCode?: string;
+  clientCity?: string;
+  clientState?: string;
+  equipmentType: 'Esteira' | 'Bicicleta Ergométrica' | 'Elíptico' | 'Estação de Musculação' | 'Macas' | 'Pilates' | 'Outro';
+  equipmentBrand: string;
+  equipmentModel: string;
+  reportedIssue: string;
+  technicalDiagnosis?: string;
+  clientDocument?: string;
+  status: OrcamentoStatus;
+  createdAt: string;
+  scheduledVisitDate?: string;
+  isRescheduled?: boolean;
+  rescheduledVisitDate?: string;
+  totalCostValue: number;
+  taxaDeslocamento: number;
+  partsCostValue?: number;
+  parts?: Part[];
+  laborCostValue?: number;
+  discountValue?: number;
+  discountType?: 'fixed' | 'percentage';
+  isLaborCourtesy?: boolean;
+  isTravelCourtesy?: boolean;
+  linkedOsId?: string;
+  linkedOsFormatado?: string;
+  convertedAt?: string;
+  paymentMethod?: 'Pix/À vista' | 'Cartão de Crédito' | 'Cartão de Débito' | 'Boleto';
+  installments?: number;
+  validityDays?: number;
+  expiresAt?: string;
 }
 
 export interface StoreSettings {
