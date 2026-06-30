@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { OrdemServico, UserRole } from '../types';
 import { 
   Plus, AlertTriangle, ShieldCheck, Activity, RotateCw, CheckCircle, 
-  Clock, DollarSign, Hammer, Calendar, Eye, X, Phone, Mail, MapPin, 
+  Clock, DollarSign, Hammer, Calendar, Eye, EyeOff, X, Phone, Mail, MapPin, 
   User, ClipboardCheck, ArrowRight, ShieldAlert, FileText, Lock,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -29,6 +29,11 @@ export default function DashboardStats({
   onShowBlockedAlert
 }: DashboardStatsProps) {
   const [listFilter, setListFilter] = useState<'dia' | 'amanha' | 'semana' | 'mes' | 'todos' | 'por-data' | 'historico' | 'pendentes' | 'conserto' | 'finalizadas' | 'aguardando-reagendamento'>('dia');
+  const [showFinancialValues, setShowFinancialValues] = useState<boolean>(false);
+
+  const toggleFinancialValues = () => {
+    setShowFinancialValues(prev => !prev);
+  };
 
   // Helper to get YYYY-MM-DD in local time
   const getLocalDateStr = (date: Date) => {
@@ -331,13 +336,39 @@ export default function DashboardStats({
       </div>
 
       {/* Advanced Budget Panel */}
+      <div className="flex items-center justify-between mt-6 mb-2">
+        <h3 className="text-xs font-black uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+          Resumo Financeiro
+        </h3>
+        <button
+          onClick={toggleFinancialValues}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border border-neutral-200 dark:border-neutral-700 cursor-pointer shadow-sm active:scale-95"
+          title={showFinancialValues ? "Ocultar valores faturamento e pendências" : "Mostrar valores faturamento e pendências"}
+        >
+          {showFinancialValues ? (
+            <>
+              <EyeOff className="w-3.5 h-3.5 text-neutral-500" />
+              <span>Ocultar Valores</span>
+            </>
+          ) : (
+            <>
+              <Eye className="w-3.5 h-3.5 text-neutral-500" />
+              <span>Mostrar Valores</span>
+            </>
+          )}
+        </button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         
         <div className="bg-neutral-900 dark:bg-neutral-100 border-2 border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 text-white dark:text-neutral-900 flex items-center justify-between shadow-sm dark:shadow-none">
           <div className="space-y-1">
             <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest block">Faturamento Técnico</span>
             <span className="text-2xl lg:text-3xl font-black block font-mono text-emerald-400 leading-none">
-              R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {showFinancialValues ? (
+                `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              ) : (
+                "R$ •••••••"
+              )}
             </span>
             <p className="text-[10px] text-gray-400 uppercase tracking-tight mt-1">Soma de todas ordens de serviço concluídas.</p>
           </div>
@@ -350,7 +381,11 @@ export default function DashboardStats({
           <div className="space-y-1">
             <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest block">Pendência em Análise</span>
             <span className="text-2xl lg:text-3xl font-black block font-mono text-yellow-300 leading-none">
-              R$ {pendingRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {showFinancialValues ? (
+                `R$ ${pendingRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              ) : (
+                "R$ •••••••"
+              )}
             </span>
             <p className="text-[10px] text-gray-400 uppercase tracking-tight mt-1">Orçamentos estimados para ordens em andamento.</p>
           </div>
