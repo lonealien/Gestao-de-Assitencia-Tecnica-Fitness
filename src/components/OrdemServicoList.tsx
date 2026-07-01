@@ -6,7 +6,7 @@ import {
   Sparkles, ShieldAlert, History, Plus, Trash2, FileText, Download, Image as ImageIcon, ExternalLink, Navigation, DollarSign, Camera, X, ChevronDown, ChevronUp, Banknote,
   Calendar, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { toJpeg } from 'html-to-image';
+import { toJpeg, toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { cleanOklabFromStylesheets } from '../utils';
 import { SignaturePad } from './SignaturePad';
@@ -812,23 +812,28 @@ export default function OrdemServicoList({
     
     setIsExportingImage(true);
     let restoreStyles: (() => void) | null = null;
+    const isDark = document.documentElement.classList.contains('dark');
+    
     try {
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+      }
+      
       await new Promise((resolve) => setTimeout(resolve, 300));
       
       restoreStyles = await cleanOklabFromStylesheets();
       
       const pixelRatio = 2; // Reduced to 2 for stability and lower memory consumption
       
-      // Capture Page 1
+      // Capture Page 1 using toPng to avoid transparency-to-black rendering artifacts
       const originalWidth1 = page1Node.offsetWidth || 512;
       const originalHeight1 = page1Node.scrollHeight;
       
-      const dataUrl1 = await toJpeg(page1Node, {
+      const dataUrl1 = await toPng(page1Node, {
         cacheBust: true,
         backgroundColor: '#ffffff',
         width: originalWidth1 * pixelRatio,
         height: originalHeight1 * pixelRatio,
-        quality: 0.85,
         styleSheetFilter: (css: CSSStyleSheet) => {
           try {
             const rules = css.cssRules;
@@ -853,7 +858,7 @@ export default function OrdemServicoList({
       
       // Page 1 matches A4 width, height calculated based on page element aspect ratio
       const page1PdfHeight = (originalHeight1 * pdfWidth) / originalWidth1;
-      pdf.addImage(dataUrl1, 'JPEG', 0, 0, pdfWidth, Math.min(page1PdfHeight, pdfPageHeight), undefined, 'FAST');
+      pdf.addImage(dataUrl1, 'PNG', 0, 0, pdfWidth, Math.min(page1PdfHeight, pdfPageHeight), undefined, 'FAST');
 
       // Capture and append Page 2 if it exists
       const page2Node = document.getElementById('os-receipt-card-page2');
@@ -861,12 +866,11 @@ export default function OrdemServicoList({
         const originalWidth2 = page2Node.offsetWidth || 512;
         const originalHeight2 = page2Node.scrollHeight;
         
-        const dataUrl2 = await toJpeg(page2Node, {
+        const dataUrl2 = await toPng(page2Node, {
           cacheBust: true,
           backgroundColor: '#ffffff',
           width: originalWidth2 * pixelRatio,
           height: originalHeight2 * pixelRatio,
-          quality: 0.85,
           styleSheetFilter: (css: CSSStyleSheet) => {
             try {
               const rules = css.cssRules;
@@ -887,7 +891,7 @@ export default function OrdemServicoList({
         
         pdf.addPage();
         const page2PdfHeight = (originalHeight2 * pdfWidth) / originalWidth2;
-        pdf.addImage(dataUrl2, 'JPEG', 0, 0, pdfWidth, Math.min(page2PdfHeight, pdfPageHeight), undefined, 'FAST');
+        pdf.addImage(dataUrl2, 'PNG', 0, 0, pdfWidth, Math.min(page2PdfHeight, pdfPageHeight), undefined, 'FAST');
       }
       
       pdf.save(`comprovante_OS_${osToExport?.idFormatado || 'os'}.pdf`);
@@ -899,6 +903,9 @@ export default function OrdemServicoList({
       setIsExportingImage(false);
       alert('Ocorreu um erro ao exportar o comprovante em PDF: ' + (error instanceof Error ? error.message : 'Falha na renderização da imagem.'));
     } finally {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      }
       if (restoreStyles) {
         restoreStyles();
       }
@@ -911,7 +918,13 @@ export default function OrdemServicoList({
     
     setIsExportingImage(true);
     let restoreStyles: (() => void) | null = null;
+    const isDark = document.documentElement.classList.contains('dark');
+    
     try {
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+      }
+      
       // Small timeout to allow styles/layouts to settle
       await new Promise((resolve) => setTimeout(resolve, 300));
       
@@ -921,12 +934,11 @@ export default function OrdemServicoList({
       const originalWidth = node.offsetWidth || 512;
       const originalHeight = node.scrollHeight;
       
-      const dataUrl = await toJpeg(node, {
+      const dataUrl = await toPng(node, {
         cacheBust: true,
-        backgroundColor: '#f5f5f5', // Neutral-100 placeholder background to space Pages beautifully if stacked
+        backgroundColor: '#ffffff', // Clean white background for printable PNG
         width: originalWidth,
         height: originalHeight,
-        quality: 0.85,
         styleSheetFilter: (css: CSSStyleSheet) => {
           try {
             const rules = css.cssRules;
@@ -956,6 +968,9 @@ export default function OrdemServicoList({
       setIsExportingImage(false);
       alert('Ocorreu um erro ao exportar o comprovante em formato de imagem. Por favor, tente novamente.');
     } finally {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      }
       if (restoreStyles) {
         restoreStyles();
       }
@@ -2942,11 +2957,12 @@ export default function OrdemServicoList({
                 style={{ width: '210mm' }}
               >
               {/* PAGE 1: Core OS Document */}
-              <div 
-                id="os-receipt-card-page1"
-                className="bg-white p-[20mm] space-y-6 font-sans text-neutral-900 relative shrink-0 shadow-lg"
-                style={{ width: '210mm', minHeight: '297mm' }}
-              >
+              <div className="shadow-lg shrink-0 rounded-none bg-white" style={{ width: '210mm', minHeight: '297mm' }}>
+                <div 
+                  id="os-receipt-card-page1"
+                  className="bg-white p-[20mm] space-y-6 font-sans text-neutral-900 relative"
+                  style={{ width: '210mm', minHeight: '297mm' }}
+                >
                 {/* Top Accent Strip */}
                 <div className="absolute top-0 left-0 right-0 h-3 bg-neutral-900" />
 
@@ -3295,14 +3311,16 @@ export default function OrdemServicoList({
                 })()}</span>
               </div>
             </div>
+          </div>
 
             {/* PAGE 2: Photos Gallery (Rendered only on a second page if photos exist) */}
             {((osToExport.fotos && osToExport.fotos.length > 0) || (osToExport.fotosAntes && osToExport.fotosAntes.length > 0) || (osToExport.fotosDepois && osToExport.fotosDepois.length > 0)) && (
-              <div 
-                id="os-receipt-card-page2"
-                className="bg-white p-[20mm] space-y-6 font-sans text-neutral-900 relative shrink-0 shadow-lg flex flex-col justify-between"
-                style={{ width: '210mm', minHeight: '297mm' }}
-              >
+              <div className="shadow-lg shrink-0 rounded-none bg-white" style={{ width: '210mm', minHeight: '297mm' }}>
+                <div 
+                  id="os-receipt-card-page2"
+                  className="bg-white p-[20mm] space-y-6 font-sans text-neutral-900 relative flex flex-col justify-between"
+                  style={{ width: '210mm', minHeight: '297mm' }}
+                >
                 <div>
                   {/* Top Accent Strip for Page 2 */}
                   <div className="absolute top-0 left-0 right-0 h-3 bg-neutral-900" style={{ width: '210mm' }} />
@@ -3371,6 +3389,7 @@ export default function OrdemServicoList({
                   <span>Página 2</span>
                 </div>
               </div>
+            </div>
             )}
             </div>
           </div>

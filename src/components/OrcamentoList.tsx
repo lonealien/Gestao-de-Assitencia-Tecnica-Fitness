@@ -127,6 +127,11 @@ export default function OrcamentoList({
       jsPDF:        { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
     };
  
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark) {
+      document.documentElement.classList.remove('dark');
+    }
+
     const restoreStyles = await cleanOklabFromStylesheets();
  
     html2pdf()
@@ -134,12 +139,18 @@ export default function OrcamentoList({
       .set(opt)
       .save()
       .then(() => {
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        }
         restoreStyles();
         // Restore original styles
         element.style.maxHeight = originalMaxHeight;
         element.style.overflow = originalOverflow;
       })
       .catch((err: any) => {
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        }
         restoreStyles();
         console.error('Erro ao gerar PDF:', err);
         // Restore original styles

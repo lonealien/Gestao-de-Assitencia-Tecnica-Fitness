@@ -243,10 +243,24 @@ export async function cleanOklabFromStylesheets(): Promise<() => void> {
     }
 
     if (cssText) {
-      // Replace oklab and oklch functions with solid rgb value
+      // Replace oklab and oklch functions with mathematically equivalent, browser-safe rgb values
       const cleanedCss = cssText
-        .replace(/oklab\([^)]+\)/g, 'rgb(0,0,0)')
-        .replace(/oklch\([^)]+\)/g, 'rgb(0,0,0)');
+        .replace(/oklab\(([^)]+)\)/g, (match, content) => {
+          try {
+            const parsed = parseOklab(content);
+            return parsed !== null ? parsed : match;
+          } catch (e) {
+            return match;
+          }
+        })
+        .replace(/oklch\(([^)]+)\)/g, (match, content) => {
+          try {
+            const parsed = parseOklch(content);
+            return parsed !== null ? parsed : match;
+          } catch (e) {
+            return match;
+          }
+        });
 
       // Create temporary style tag with cleaned CSS
       const tempStyle = document.createElement('style');
@@ -274,4 +288,103 @@ export async function cleanOklabFromStylesheets(): Promise<() => void> {
   };
 
   return restore;
+}
+
+function parseOklch(str: string): string | null {
+  const parts = str.trim().split(/[\s,/]+/);
+  if (parts.length < 3) return null;
+
+  const L_str = parts[0];
+  const C_str = parts[1];
+  const H_str = parts[2];
+  const A_str = parts[3];
+
+  let L = L_str.endsWith('%') ? parseFloat(L_str) / 100 : parseFloat(L_str);
+  let C = parseFloat(C_str);
+  
+  let H = 0;
+  if (H_str.endsWith('deg')) {
+    H = parseFloat(H_str);
+  } else if (H_str.endsWith('rad')) {
+    H = parseFloat(H_str) * (180 / Math.PI);
+  } else if (H_str.endsWith('turn')) {
+    H = parseFloat(H_str) * 360;
+  } else {
+    H = parseFloat(H_str);
+  }
+
+  if (isNaN(L) || isNaN(C) || isNaN(H)) return null;
+
+  const hRad = (H * Math.PI) / 180;
+  const a = C * Math.cos(hRad);
+  const b = C * Math.sin(hRad);
+
+  const rgb = oklabToRgbValues(L, a, b);
+
+  if (A_str !== undefined) {
+    let A = A_str.endsWith('%') ? parseFloat(A_str) / 100 : parseFloat(A_str);
+    if (isNaN(A)) A = 1;
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${A})`;
+  }
+
+  return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+}
+
+function parseOklab(str: string): string | null {
+  const parts = str.trim().split(/[\s,/]+/);
+  if (parts.length < 3) return null;
+
+  const L_str = parts[0];
+  const a_str = parts[1];
+  const b_str = parts[2];
+  const A_str = parts[3];
+
+  let L = L_str.endsWith('%') ? parseFloat(L_str) / 100 : parseFloat(L_str);
+  let a = parseFloat(a_str);
+  let b = parseFloat(b_str);
+
+  if (isNaN(L) || isNaN(a) || isNaN(b)) return null;
+
+  const rgb = oklabToRgbValues(L, a, b);
+
+  if (A_str !== undefined) {
+    let A = A_str.endsWith('%') ? parseFloat(A_str) / 100 : parseFloat(A_str);
+    if (isNaN(A)) A = 1;
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${A})`;
+  }
+
+  return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+}
+
+function oklabToRgbValues(L: number, a: number, b: number): { r: number; g: number; b: number } {
+  // LMS from Oklab
+  const l = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s = L - 0.0894841775 * a - 1.291485548 * b;
+
+  // Cubic non-linearity
+  const l3 = l * l * l;
+  const m3 = m * m * m;
+  const s3 = s * s * s;
+
+  // Linear RGB from LMS'
+  const r_lin = 4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
+  const g_lin = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
+  const b_lin = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.707621684 * s3;
+
+  // Gamma correction function
+  const gamma = (c: number) => {
+    if (c <= 0.0031308) {
+      return 12.92 * c;
+    } else {
+      return 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+    }
+  };
+
+  // Convert to 0-255 range and clamp
+  const rVal = Math.max(0, Math.min(255, Math.round(gamma(r_lin) * 255)));
+  const gVal = Math.max(0, Math.min(255, Math.round(gamma(g_lin) * 255)));
+  const bVal = Math.max(0, Math.min(255, Math.round(gamma(b_lin) * 255)));
+
+  return { r: rVal, g: gVal, b: bVal };
 }
